@@ -5619,6 +5619,7 @@ const shardusSetup = (): void => {
           wrappedEVMAccount.accountType !== AccountType.NetworkAccount &&
           wrappedEVMAccount.accountType !== AccountType.NodeAccount &&
           wrappedEVMAccount.accountType !== AccountType.NodeAccount2 &&
+          wrappedEVMAccount.accountType !== AccountType.SecureAccount &&
           wrappedEVMAccount.accountType !== AccountType.NodeRewardReceipt &&
           wrappedEVMAccount.accountType !== AccountType.DevAccount
         )
@@ -6082,6 +6083,7 @@ const shardusSetup = (): void => {
         updatedEVMAccount.accountType !== AccountType.NetworkAccount &&
         updatedEVMAccount.accountType !== AccountType.NodeAccount &&
         updatedEVMAccount.accountType !== AccountType.NodeAccount2 &&
+        updatedEVMAccount.accountType !== AccountType.SecureAccount &&
         updatedEVMAccount.accountType !== AccountType.NodeRewardReceipt &&
         updatedEVMAccount.accountType !== AccountType.DevAccount
       ) {
