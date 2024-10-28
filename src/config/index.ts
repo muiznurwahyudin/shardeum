@@ -134,14 +134,14 @@ config = merge(config, {
     p2p: {
       cycleDuration: 60,
       minNodesToAllowTxs: 1, // to allow single node networks
-      baselineNodes: process.env.baselineNodes ? parseInt(process.env.baselineNodes) : 300, // config used for baseline for entering recovery, restore, and safety. Should be equivalient to minNodes on network startup
-      minNodes: process.env.minNodes ? parseInt(process.env.minNodes) : 300,
+      baselineNodes: process.env.baselineNodes ? parseInt(process.env.baselineNodes) : 20, // config used for baseline for entering recovery, restore, and safety. Should be equivalient to minNodes on network startup
+      minNodes: process.env.minNodes ? parseInt(process.env.minNodes) : 20,
       maxNodes: process.env.maxNodes ? parseInt(process.env.maxNodes) : 1100,
       maxJoinedPerCycle: 10,
       maxSyncingPerCycle: 10,
       maxRotatedPerCycle: process.env.maxRotatedPerCycle ? parseInt(process.env.maxRotatedPerCycle) : 1,
       firstCycleJoin: 0,
-      maxSyncTimeFloor: 1200, //Using 6000 for a restore from archiver, then set config at runtime back to 1200
+      maxSyncTimeFloor: 10000, //Using 6000 for a restore from archiver, then set config at runtime back to 1200
       //  1200=20 minutes.  If the network lives a long time we may have to bump this up
       syncBoostEnabled: false,
       amountToGrow: 30,
