@@ -30,7 +30,7 @@ export function verifyStakeTx(
   // eslint-disable-next-line security/detect-object-injection
   const networkAccount: NetworkAccount = wrappedStates[globalAccount].data
   const minStakeAmountUsd = networkAccount.current.stakeRequiredUsd
-  const minStakeAmount = scaleByStabilityFactor(minStakeAmountUsd, AccountsStorage.cachedNetworkAccount)
+  const minStakeAmount = scaleByStabilityFactor(minStakeAmountUsd, networkAccount)
   const nomineeAccount = wrappedStates[stakeCoinsTx.nominee].data as NodeAccount2
   if (typeof stakeCoinsTx.stake === 'object') stakeCoinsTx.stake = BigInt(stakeCoinsTx.stake)
   if (stakeCoinsTx.nominator == null || stakeCoinsTx.nominator.toLowerCase() !== senderAddress.toString()) {
@@ -172,7 +172,8 @@ export function verifyUnstakeTx(
     reason = `This nominee node is not found!`
   }
 
-  if (!isStakeUnlocked(nominatorAccount, nomineeAccount, shardus)) {
+  // eslint-disable-next-line security/detect-object-injection
+  if (!isStakeUnlocked(nominatorAccount, nomineeAccount, shardus, wrappedStates[globalAccount].data)) {
     success = false
     reason = `The stake is not unlocked yet!`
   }
@@ -183,9 +184,10 @@ export function verifyUnstakeTx(
 function isStakeUnlocked(
   nominatorAccount: WrappedEVMAccount,
   nomineeAccount: NodeAccount2,
-  shardus: Shardus
+  shardus: Shardus,
+  networkAccount: NetworkAccount
 ): boolean {
-  const stakeLockTime = AccountsStorage.cachedNetworkAccount.current.stakeLockTime
+  const stakeLockTime = networkAccount.current.stakeLockTime
 
   // SLT from time of last staking or unstaking
   if (shardus.shardusGetTime() - nominatorAccount.operatorAccountInfo.lastStakeTimestamp < stakeLockTime) {
