@@ -4019,6 +4019,8 @@ const shardusSetup = (): void => {
       }
       try {
         if (appData.internalTx && appData.internalTXType === InternalTXType.Stake) {
+          appData.internalTx = getStakeTxBlobFromEVMTx(transaction)
+          appData.internalTx.stake = BigInt(appData.internalTx.stake)
           verifyResult = verifyStakeTx(appData.internalTx, senderAddress, wrappedStates)
         }
         if (appData.internalTx && appData.internalTXType === InternalTXType.Unstake) {
