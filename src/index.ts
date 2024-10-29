@@ -2223,12 +2223,31 @@ const configShardusEndpoints = (): void => {
       }
       const limit = skip + 1000
       let accounts = []
+      // need to figure out how to handle this for secure accounts
       if (genesisAccounts.length > 0) {
         accounts = genesisAccounts.slice(skip, limit)
       }
       res.json({ success: true, accounts })
     } catch (error) {
       /* prettier-ignore */ if (logFlags.error) console.error('Error in processing genesis_accounts request:', error)
+      res.status(500).json({ error: 'Internal Server Error' })
+    }
+  })
+
+  shardus.registerExternalGet('secure_accounts', externalApiMiddleware, async (req, res) => {
+    try {
+      // for each secure account, we need to get the data
+      const secureAccounts = []
+      // use AccountsStorage.getAccount for each secureAccount.sourceFundsAddress && secureAccount.recipientFundsAddress
+      for (const secureAccountConfig of Object.values(secureAccountDataMap)) {
+        const secureAccount = await AccountsStorage.getAccount(secureAccountConfig.SecureAccountAddress)
+        const sourceAccount = await AccountsStorage.getAccount(secureAccountConfig.SourceFundsAddress)
+        const recipientAccount = await AccountsStorage.getAccount(secureAccountConfig.RecipientFundsAddress)
+        secureAccounts.push({ secureAccount, sourceAccount, recipientAccount, secureAccountConfig })
+      }
+      res.json({ success: true, accounts: secureAccounts })
+    } catch (error) {
+      /* prettier-ignore */ if (logFlags.error) console.error('Error in processing secure_accounts request:', error)
       res.status(500).json({ error: 'Internal Server Error' })
     }
   })
@@ -2835,10 +2854,14 @@ async function applyInternalTx(
     const penaltyTx = internalTx as PenaltyTX
     applyPenaltyTX(shardus, penaltyTx, wrappedStates, txId, txTimestamp, applyResponse)
   }
-  if (internalTx.internalTXType === InternalTXType.TransferFromSecureAccount) {  
+  if (internalTx.internalTXType === InternalTXType.TransferFromSecureAccount) {
     await applyTransferFromSecureAccount(
-      internalTx as TransferFromSecureAccount, 
-      wrappedStates, { crackedData }, shardus, applyResponse);
+      internalTx as unknown as TransferFromSecureAccount,
+      txId,
+      wrappedStates, 
+      shardus,
+      applyResponse
+    );
     return applyResponse;
   }
   return applyResponse
@@ -5258,16 +5281,7 @@ const shardusSetup = (): void => {
         }
         /* prettier-ignore */ if (ShardeumFlags.VerboseLogs) console.log( `txPreCrackData final result: txNonce: ${appData.txNonce}, currentNonce: ${ appData.nonce }, queueCount: ${appData.queueCount}, appData ${Utils.safeStringify(appData)}` )
       }
-      if (isTransferFromSecureAccount(tx)) {
-        try {
-          const crackedData = crackTransferFromSecureAccount(tx as TransferFromSecureAccount)
-          appData.crackedData = crackedData
-          appData.involvedAccounts = crackedData.involvedAccounts
-          return { status: true, reason: 'TransferFromSecureAccount cracked successfully' }
-        } catch (error) {
-          return { status: false, reason: `Failed to crack TransferFromSecureAccount: ${error.message}` }
-        }
-      }
+      
       return { status: true, reason: 'Passed' }
     },
 
@@ -5356,15 +5370,10 @@ const shardusSetup = (): void => {
         } else if (internalTx.internalTXType === InternalTXType.Penalty) {
           keys.sourceKeys = [tx.reportedNodePublickKey]
           keys.targetKeys = [toShardusAddress(tx.operatorEVMAddress, AccountType.Account), networkAccount]
-        } else if (internalTx.internalTXType === InternalTXType.TransferFromSecureAccount) {
-          keys.sourceKeys = [
-            // get the address from the 
-            secureAccountDataMap.get(tx.accountName).SourceFundsAddress,
-            secureAccountDataMap.get(tx.accountName).SecureAccountAddress,
-          ]
-          keys.targetKeys = [
-            secureAccountDataMap.get(tx.accountName).RecipientFundsAddress
-          ]
+        } else if (isTransferFromSecureAccount(tx)) {
+          const { sourceKeys, targetKeys } = crackTransferFromSecureAccount(tx)
+          keys.sourceKeys = sourceKeys
+          keys.targetKeys = targetKeys
         }
         keys.allKeys = keys.allKeys.concat(keys.sourceKeys, keys.targetKeys, keys.storageKeys)
         // temporary hack for creating a receipt of node reward tx

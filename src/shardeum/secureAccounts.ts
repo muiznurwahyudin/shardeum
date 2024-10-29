@@ -1,4 +1,4 @@
-import { AccountMap, AccountType, BaseAccount, InternalTXType, ReadableReceipt, TransferFromSecureAccount, WrappedEVMAccount } from './shardeumTypes'
+import { AccountMap, AccountType, BaseAccount, InternalTx, InternalTxBase, InternalTXType, ReadableReceipt, TransferFromSecureAccount, WrappedEVMAccount, WrappedStates } from './shardeumTypes'
 import { updateEthAccountHash } from './wrappedEVMAccountFunctions'
 import { ShardeumFlags } from './shardeumFlags'
 import { generateTxId } from '../utils'
@@ -8,7 +8,7 @@ import { ShardusTypes, DevSecurityLevel, Shardus } from '@shardus/core'
 import { verifyMultiSigs } from '../setup/helpers'
 import { shardusConfig } from '..'
 import { _shardusWrappedAccount } from './wrappedEVMAccountFunctions'
-import { crypto } from '@shardus/core'
+import { crypto } from '../setup/helpers'
 
 export interface SecureAccount extends BaseAccount {
   id: string
@@ -84,34 +84,19 @@ export const secureAccountDataMap: Map<string, SecureAccountData> = new Map(
 )
 
 interface CrackedData {
-  timestamp: number
-  txId: string
-  involvedAccounts: {
-    sourceFunds: string
-    recipientFunds: string
-    secureAccount: string
-  }
+  sourceKeys: string[]
+  targetKeys: string[]
 }
 
 export function crack(tx: TransferFromSecureAccount): CrackedData {
-  const timestamp = Date.now()
-  const txId = generateTxId(tx)
-
-  const secureAccountData = secureAccountDataMap.get(tx.accountName)
-  if (!secureAccountData) {
-    throw new Error(`SecureAccount not found for name: ${tx.accountName}`)
-  }
-
-  const involvedAccounts = {
-    sourceFunds: toShardusAddress(secureAccountData.SourceFundsAddress, AccountType.Account),
-    recipientFunds: toShardusAddress(secureAccountData.RecipientFundsAddress, AccountType.Account),
-    secureAccount: toShardusAddress(secureAccountData.SecureAccountAddress, AccountType.SecureAccount)
-  }
-
   return {
-    timestamp,
-    txId,
-    involvedAccounts
+    sourceKeys: [
+      secureAccountDataMap.get(tx.accountName).SourceFundsAddress,
+      secureAccountDataMap.get(tx.accountName).SecureAccountAddress,
+    ],
+    targetKeys: [
+      secureAccountDataMap.get(tx.accountName).RecipientFundsAddress
+    ]
   }
 }
 
@@ -177,14 +162,17 @@ export function verify(
     return { isValid: false, reason: commonValidation.reason }
   }
 
-  const secureAccountData = wrappedStates.get(tx.accountName)
-  if (!secureAccountData || secureAccountData.accountType !== AccountType.SecureAccount) {
+  const secureAccountConfig = secureAccountDataMap.get(tx.accountName)
+  // this may be wrong, and its possible that I need to make wrappedStates give me this account as a wrapped evm account?
+  // not sure but this is probably fine
+  const secureAccount = wrappedStates.get(secureAccountConfig.SecureAccountAddress) as unknown as SecureAccount
+
+  if (!secureAccount || secureAccount.accountType !== AccountType.SecureAccount) {
     return { isValid: false, reason: 'Secure account not found or invalid' }
   }
 
-  const secureAccount = secureAccountData as WrappedEVMAccount
-  const sourceFundsAccount = wrappedStates.get(secureAccount.operatorAccountInfo.SourceFundsAddress) as WrappedEVMAccount
-  const recipientFundsAccount = wrappedStates.get(secureAccount.operatorAccountInfo.RecipientFundsAddress) as WrappedEVMAccount
+  const sourceFundsAccount = wrappedStates.get(secureAccountConfig.SourceFundsAddress) as WrappedEVMAccount
+  const recipientFundsAccount = wrappedStates.get(secureAccountConfig.RecipientFundsAddress) as WrappedEVMAccount
 
   if (!sourceFundsAccount || !recipientFundsAccount) {
     return { isValid: false, reason: 'Source or recipient account not found' }
@@ -197,12 +185,12 @@ export function verify(
     return { isValid: false, reason: 'Insufficient balance in source account' }
   }
 
-  if (tx.nonce !== Number(secureAccount.account.nonce)) {
+  if (tx.nonce !== Number(secureAccount.nonce)) {
     return { isValid: false, reason: 'Invalid nonce' }
   }
 
   const currentTime = Date.now()
-  if (currentTime < secureAccount.account.nextTransferTime) {
+  if (currentTime < secureAccount.nextTransferTime) {
     return { isValid: false, reason: 'Transfer not allowed yet, time restriction' }
   }
 
@@ -215,74 +203,72 @@ export function verify(
 
 export async function apply(
   tx: TransferFromSecureAccount,
-  wrappedStates: AccountMap,
-  appData: any,
+  txId: string,
+  wrappedStates: WrappedStates,
   shardus: Shardus,
   applyResponse: ShardusTypes.ApplyResponse
 ): Promise<void> {
-  const crackedData = appData.crackedData;
-  if (!crackedData) {
-    throw new Error('Cracked data not found in appData');
-  }
-
-  const sourceEOA = wrappedStates[crackedData.involvedAccounts.sourceFunds] as WrappedEVMAccount;
-  const destEOA = wrappedStates[crackedData.involvedAccounts.recipientFunds] as WrappedEVMAccount;
-  const secureAccount = wrappedStates[crackedData.involvedAccounts.secureAccount] as SecureAccount;
-
+  const secureAccountConfig = secureAccountDataMap.get(tx.accountName)
+  const sourceEOA = wrappedStates[secureAccountConfig.SourceFundsAddress];
+  const destEOA = wrappedStates[secureAccountConfig.RecipientFundsAddress];
+  const secureAccount = wrappedStates[secureAccountConfig.SecureAccountAddress];
+  const sourceEOAData = sourceEOA.data as WrappedEVMAccount;
+  const destEOAData = destEOA.data as WrappedEVMAccount;
+  const secureAccountData = secureAccount.data as SecureAccount; 
   if (!sourceEOA || !destEOA || !secureAccount) {
     throw new Error('One or more required accounts not found');
   }
 
   const amount = BigInt(tx.amount);
 
-  if (BigInt(sourceEOA.account.balance) < amount) {
+  if (BigInt(sourceEOAData.balance) < amount) {
     throw new Error('Insufficient balance in source account');
   }
 
-  sourceEOA.account.balance = sourceEOA.account.balance - amount;
-  destEOA.account.balance = destEOA.account.balance + amount;
+  sourceEOAData.balance = Number(BigInt(sourceEOAData.balance) - amount)
+  destEOAData.balance = Number(BigInt(destEOAData.balance) + amount)
 
-  secureAccount.nonce += 1;
+  secureAccountData.nonce += 1;
   
-  updateEthAccountHash(sourceEOA);
-  updateEthAccountHash(destEOA);
-  updateEthAccountHash(secureAccount);
+  updateEthAccountHash(sourceEOAData);
+  updateEthAccountHash(destEOAData);
+  updateEthAccountHash(secureAccountData);
 
-  const wrappedSourceEOA = _shardusWrappedAccount(sourceEOA);
-  const wrappedDestEOA = _shardusWrappedAccount(destEOA);
-  const wrappedSecureAccount = _shardusWrappedAccount(secureAccount);
+  const wrappedSourceEOA = _shardusWrappedAccount(sourceEOAData);
+  const wrappedDestEOA = _shardusWrappedAccount(destEOAData);
+  const wrappedSecureAccount = _shardusWrappedAccount(secureAccountData);
 
   shardus.applyResponseAddChangedAccount(
     applyResponse,
-    crackedData.involvedAccounts.sourceFunds,
+    secureAccountConfig.SourceFundsAddress,
     wrappedSourceEOA as ShardusTypes.WrappedResponse,
-    crackedData.txId,
+    txId,
     applyResponse.txTimestamp
   );
   shardus.applyResponseAddChangedAccount(
     applyResponse,
-    crackedData.involvedAccounts.recipientFunds,
+    secureAccountConfig.RecipientFundsAddress,
     wrappedDestEOA as ShardusTypes.WrappedResponse,
-    crackedData.txId,
+    txId,
     applyResponse.txTimestamp
   );
   shardus.applyResponseAddChangedAccount(
     applyResponse,
-    crackedData.involvedAccounts.secureAccount,
+    secureAccountConfig.SecureAccountAddress,
     wrappedSecureAccount as ShardusTypes.WrappedResponse,
-    crackedData.txId,
+    txId,
     applyResponse.txTimestamp
   );
 
   // Create the receipt data
   const readableReceipt: ReadableReceipt = {
     status: 1, 
-    transactionHash: crackedData.txId,
+    transactionHash: txId,
     transactionIndex: '0x0',
     blockHash: '', 
     blockNumber: '0x0',
-    from: crackedData.involvedAccounts.sourceFunds,
-    to: crackedData.involvedAccounts.recipientFunds,
+    from: secureAccountConfig.SourceFundsAddress,
+    to: secureAccountConfig.RecipientFundsAddress,
     contractAddress: null,
     cumulativeGasUsed: '0x0',
     gasUsed: '0x0',
@@ -298,13 +284,13 @@ export async function apply(
 
   const wrappedReceiptAccount: WrappedEVMAccount = {
     timestamp: applyResponse.txTimestamp,
-    ethAddress: crackedData.txId, // Using txId as ethAddress for the receipt
+    ethAddress: txId, // Using txId as ethAddress for the receipt
     hash: '',
     readableReceipt,
     amountSpent: '0x0',
-    txId: crackedData.txId,
+    txId: txId,
     accountType: AccountType.SecureAccount,
-    txFrom: crackedData.involvedAccounts.sourceFunds,
+    txFrom: secureAccountConfig.SourceFundsAddress,
   };
 
   const receiptShardusAccount = _shardusWrappedAccount(wrappedReceiptAccount);
@@ -314,4 +300,8 @@ export async function apply(
     receiptShardusAccount,
     crypto.hashObj(receiptShardusAccount)
   );
+}
+
+export function isTransferFromSecureAccount(tx: InternalTxBase): tx is TransferFromSecureAccount {
+  return tx.internalTXType === InternalTXType.TransferFromSecureAccount
 }
