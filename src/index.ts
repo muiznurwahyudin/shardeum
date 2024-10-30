@@ -1664,7 +1664,7 @@ const configShardusEndpoints = (): void => {
     } catch (error) {
       res.json({ error: error.message || 'An error occurred' })
     }
-  }
+  })
 
   shardus.registerExternalGet('eth_getCode', externalApiMiddleware, async (req, res) => {
     if (ShardeumFlags.disableSmartContractEndpoints) {
