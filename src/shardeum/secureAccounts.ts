@@ -295,6 +295,7 @@ export async function apply(
 
   const receiptShardusAccount = _shardusWrappedAccount(wrappedReceiptAccount);
   
+  console.log('SENDING RECEIPT TO ARCHIVER', JSON.stringify(receiptShardusAccount, null, 2));
   shardus.applyResponseAddReceiptData(
     applyResponse,
     receiptShardusAccount,

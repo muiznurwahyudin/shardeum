@@ -57,7 +57,6 @@ export const sync = (shardus: Shardus, evmCommon: any) => async (): Promise<void
       //create genesis accounts before network account since nodes will wait for the network account
       /* prettier-ignore */ if (logFlags.important_as_error) shardus.log(`node ${nodeId} GENERATED_A_NEW_NETWORK_ACCOUNT: `)
       if (ShardeumFlags.SetupGenesisAccount) {
-        console.log('SETTING UP Genesis accounts');
         let skippedAccountCount = 0
         let accountCopies = []
 
@@ -92,23 +91,17 @@ export const sync = (shardus: Shardus, evmCommon: any) => async (): Promise<void
             isGlobal: false,
             timestamp: wrappedEVMAccount.timestamp,
           };
-          console.log('Genesis account copy: ', Utils.safeStringify(accountCopy));
-          
+         
           accountCopies.push(accountCopy);
           /* prettier-ignore */ if (logFlags.important_as_error) shardus.log(`node ${nodeId} SETUP GENESIS ACCOUNT: ${address}  amt: ${amount}`);
         }
 
-        console.log('number of genesisSecureAccounts:', genesisSecureAccounts.length);
-
         for (const secureAccountConfig of genesisSecureAccounts) {
-          console.log('SETTING UP Genesis SECURE ACCOUNTS');
           const cycles = shardus.getLatestCycles()
           const secureAccount = initializeSecureAccount(
             secureAccountConfig as SecureAccountConfig,
             cycles
           );
-          
-          console.log('secure account: ', JSON.stringify(serializeSecureAccount(secureAccount), null, '  '));
           
           const serializedSecureAccount = serializeSecureAccount(secureAccount);
           const accountCopy: ShardusTypes.AccountsCopy = {
@@ -119,7 +112,7 @@ export const sync = (shardus: Shardus, evmCommon: any) => async (): Promise<void
             isGlobal: false,
             timestamp: serializedSecureAccount.timestamp,
           };
-          console.log('secure account serialized: ', JSON.stringify(accountCopy, null, '  '));
+         
           accountCopies.push(accountCopy);
           /* prettier-ignore */ if (logFlags.important_as_error) shardus.log(`node ${nodeId} SETUP GENESIS SECUREACCOUNT: ${serializedSecureAccount.id}`);
         }

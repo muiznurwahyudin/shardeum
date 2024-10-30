@@ -132,13 +132,13 @@ if (process.env.APP_IP) {
 config = merge(config, {
   server: {
     p2p: {
-      cycleDuration: 60,
+      cycleDuration: 30,
       minNodesToAllowTxs: 1, // to allow single node networks
-      baselineNodes: process.env.baselineNodes ? parseInt(process.env.baselineNodes) : 20, // config used for baseline for entering recovery, restore, and safety. Should be equivalient to minNodes on network startup
-      minNodes: process.env.minNodes ? parseInt(process.env.minNodes) : 20,
+      baselineNodes: 10, // Reduce from default of 20/300
+      minNodes: 10, // Reduce from default of 20/300
       maxNodes: process.env.maxNodes ? parseInt(process.env.maxNodes) : 1100,
-      maxJoinedPerCycle: 10,
-      maxSyncingPerCycle: 10,
+      maxJoinedPerCycle: 16,
+      maxSyncingPerCycle: 16,
       maxRotatedPerCycle: process.env.maxRotatedPerCycle ? parseInt(process.env.maxRotatedPerCycle) : 1,
       firstCycleJoin: 0,
       maxSyncTimeFloor: 1200, //Using 6000 for a restore from archiver, then set config at runtime back to 1200
