@@ -6164,6 +6164,10 @@ const shardusSetup = (): void => {
       const finalResults: ShardusTypes.WrappedData[] = []
 
       if (ShardeumFlags.UseDBForAccounts === true) {
+        console.log('app.getAccountDataByRange:',
+          { accountStart, accountEnd, tsStart, tsEnd, maxRecords, offset, accountOffset })
+
+
         //direct DB query
         const dbResults = await AccountsStorage.queryAccountsEntryByRanges2(
           accountStart,

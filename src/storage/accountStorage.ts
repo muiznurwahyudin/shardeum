@@ -219,6 +219,9 @@ export async function queryAccountsEntryByRanges2(
     let results
 
     if (accountOffset != null && accountOffset.length > 0) {
+
+
+
       results = await storage.queryAccountsEntryByRanges3(
         accountStart,
         accountEnd,
@@ -226,6 +229,11 @@ export async function queryAccountsEntryByRanges2(
         tsEnd,
         maxRecords,
         accountOffset
+      )
+
+      console.log('storage.queryAccountsEntryByRanges3',
+        { accountStart, accountEnd, tsStart, tsEnd, maxRecords, accountOffset },
+        'results count: ', results.length
       )
     } else {
       results = await storage.queryAccountsEntryByRanges2(
@@ -235,6 +243,10 @@ export async function queryAccountsEntryByRanges2(
         tsEnd,
         maxRecords,
         offset
+      )
+      console.log('storage.queryAccountsEntryByRanges2',
+        { accountStart, accountEnd, tsStart, tsEnd, maxRecords, offset },
+        'results count: ', results.length
       )
     }
 
