@@ -3,12 +3,17 @@ import { updateEthAccountHash } from './wrappedEVMAccountFunctions'
 import { ShardeumFlags } from './shardeumFlags'
 import { generateTxId } from '../utils'
 import { toShardusAddress } from './evmAddress'
-import genesisSecureAccounts from '../config/genesis-secure-accounts.json'
+
 import { ShardusTypes, DevSecurityLevel, Shardus } from '@shardus/core'
 import { verifyMultiSigs } from '../setup/helpers'
 import { shardusConfig } from '..'
 import { _shardusWrappedAccount } from './wrappedEVMAccountFunctions'
 import { crypto } from '../setup/helpers'
+import { VectorBufferStream } from '@shardus/core'
+import { TypeIdentifierEnum } from '../types/enum/TypeIdentifierEnum'
+
+import genesisSecureAccounts from '../config/genesis-secure-accounts.json'
+validateSecureAccountConfig(genesisSecureAccounts)
 
 export interface SecureAccount extends BaseAccount {
   id: string
@@ -101,7 +106,7 @@ export function crack(tx: TransferFromSecureAccount): CrackedData {
 }
 
 export function validateTransferFromSecureAccount(tx: TransferFromSecureAccount, shardus: Shardus): { success: boolean; reason: string } {
- if (tx.txType !== InternalTXType.TransferFromSecureAccount) {
+  if (tx.txType !== InternalTXType.TransferFromSecureAccount) {
     return { success: false, reason: 'Invalid transaction type' }
   }
 
@@ -117,7 +122,9 @@ export function validateTransferFromSecureAccount(tx: TransferFromSecureAccount,
     return { success: false, reason: 'Invalid nonce' }
   }
 
-  const secureAccountData = genesisSecureAccounts.find(account => account.Name === tx.accountName)
+  console.log('tx.accountName:', tx.accountName);
+  console.log('genesisSecureAccounts:', genesisSecureAccounts);
+  const secureAccountData = secureAccountDataMap.get(tx.accountName)
   if (!secureAccountData) {
     return { success: false, reason: 'Secure account not found' }
   }
@@ -135,8 +142,11 @@ export function validateTransferFromSecureAccount(tx: TransferFromSecureAccount,
   }
 
   const allowedPublicKeys = shardus.getMultisigPublicKeys()
-  const requiredSigs = Math.max(1, shardusConfig.debug.minMultiSigRequiredForGlobalTxs)
-
+  const requiredSigs = Math.max(1, shardusConfig.debug.minMultiSigRequiredForGlobalTxs || 1)
+  console.log('requiredSigs:', requiredSigs);
+  console.log('allowedPublicKeys:', allowedPublicKeys);
+  console.log('tx.sign:', tx.sign);
+  console.log('txData:', txData);
   const isSignatureValid = verifyMultiSigs(
     txData,
     tx.sign,
@@ -221,12 +231,12 @@ export async function apply(
 
   const amount = BigInt(tx.amount);
 
-  if (BigInt(sourceEOAData.balance) < amount) {
+  if (BigInt(sourceEOAData.account.balance) < amount) {
     throw new Error('Insufficient balance in source account');
   }
 
-  sourceEOAData.balance = Number(BigInt(sourceEOAData.balance) - amount)
-  destEOAData.balance = Number(BigInt(destEOAData.balance) + amount)
+  sourceEOAData.balance = Number(BigInt(sourceEOAData.account.balance) - amount)
+  destEOAData.balance = Number(BigInt(destEOAData.account.balance) + amount)
 
   secureAccountData.nonce += 1;
   
@@ -293,6 +303,7 @@ export async function apply(
     txFrom: secureAccountConfig.SourceFundsAddress,
   };
 
+  console.log('Getting receiptShardusAccount from wrappedReceiptAccount:', JSON.stringify(wrappedReceiptAccount, null, 2));
   const receiptShardusAccount = _shardusWrappedAccount(wrappedReceiptAccount);
   
   console.log('SENDING RECEIPT TO ARCHIVER', JSON.stringify(receiptShardusAccount, null, 2));
@@ -305,4 +316,51 @@ export async function apply(
 
 export function isTransferFromSecureAccount(tx: InternalTxBase): tx is TransferFromSecureAccount {
   return tx.internalTXType === InternalTXType.TransferFromSecureAccount
+}
+
+export function deserializeSecureAccount(stream: VectorBufferStream, root = false): SecureAccount {
+  try {
+    if (root) {
+      const typeId = stream.readUInt16()
+      if (typeId !== TypeIdentifierEnum.cSecureAccount) {
+        throw new Error(`Invalid type identifier: ${typeId}`)
+      }
+    }
+
+    return {
+      id: stream.readString(),
+      hash: stream.readString(),
+      timestamp: Number(stream.readBigUInt64()),
+      accountType: AccountType.SecureAccount,
+      name: stream.readString(),
+      nextTransferAmount: stream.readBigUInt64(),
+      nextTransferTime: Number(stream.readBigUInt64()),
+      nonce: stream.readUInt32()
+    }
+  } catch (e) {
+    if (e instanceof RangeError) {
+      throw new Error('Unexpected end of buffer')
+    }
+    throw e
+  }
+}
+
+function validateSecureAccountConfig(config: SecureAccountConfig[]): void {
+  const seenAddresses = new Set<string>()
+  
+  for (const account of config) {
+    if (account.SourceFundsAddress === account.RecipientFundsAddress) {
+      throw new Error(`Invalid secure account config for ${account.Name}: Source and recipient addresses must be different`)
+    }
+    
+    if (seenAddresses.has(account.SourceFundsAddress)) {
+      throw new Error(`Duplicate source address found: ${account.SourceFundsAddress}`)
+    }
+    if (seenAddresses.has(account.RecipientFundsAddress)) {
+      throw new Error(`Duplicate recipient address found: ${account.RecipientFundsAddress}`)
+    }
+    
+    seenAddresses.add(account.SourceFundsAddress)
+    seenAddresses.add(account.RecipientFundsAddress)
+  }
 }

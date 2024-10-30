@@ -23,15 +23,17 @@ export function deserializeSecureAccount(stream: VectorBufferStream, root = fals
   if (root) {
     stream.readUInt16() // TypeIdentifier
   }
-  return {
+  const foo = {
     id: stream.readString(),
     hash: stream.readString(),
     timestamp: Number(stream.readBigUInt64()),
-    accountType: AccountType.SecureAccount,
+    accountType: stream.readUInt8(),
     name: stream.readString(),
     nextTransferAmount: stream.readBigUInt64(),
     nextTransferTime: Number(stream.readBigUInt64()),
     nonce: stream.readUInt32(),
-  }
+  };
+  console.log('FOO IS', foo);
+  return foo;
 }
 

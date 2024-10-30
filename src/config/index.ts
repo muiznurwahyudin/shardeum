@@ -132,13 +132,13 @@ if (process.env.APP_IP) {
 config = merge(config, {
   server: {
     p2p: {
-      cycleDuration: 30,
+      cycleDuration: 60,
       minNodesToAllowTxs: 1, // to allow single node networks
-      baselineNodes: 10, // Reduce from default of 20/300
-      minNodes: 10, // Reduce from default of 20/300
+      baselineNodes: process.env.baselineNodes ? parseInt(process.env.baselineNodes) : 10, // config used for baseline for entering recovery, restore, and safety. Should be equivalient to minNodes on network startup
+      minNodes: process.env.minNodes ? parseInt(process.env.minNodes) : 10,
       maxNodes: process.env.maxNodes ? parseInt(process.env.maxNodes) : 1100,
-      maxJoinedPerCycle: 16,
-      maxSyncingPerCycle: 16,
+      maxJoinedPerCycle: 10,
+      maxSyncingPerCycle: 10,
       maxRotatedPerCycle: process.env.maxRotatedPerCycle ? parseInt(process.env.maxRotatedPerCycle) : 1,
       firstCycleJoin: 0,
       maxSyncTimeFloor: 1200, //Using 6000 for a restore from archiver, then set config at runtime back to 1200
@@ -313,8 +313,8 @@ config = merge(
       mode: 'debug', // todo: must set this to "release" for public networks or get security on endpoints. use "debug"
       // for easier debugging
       debug: {
-        startInFatalsLogMode: true, // true setting good for big aws test with nodes joining under stress.
-        startInErrorLogMode: false,
+        startInFatalsLogMode: false, // true setting good for big aws test with nodes joining under stress.
+        startInErrorLogMode: true,
         robustQueryDebug: false,
         fakeNetworkDelay: 0,
         disableSnapshots: true, // do not check in if set to false
@@ -378,6 +378,8 @@ config = merge(
           /* prettier-ignore */ '0x4ed5C053BF2dA5F694b322EA93dce949F3276B85': DevSecurityLevel.High, // test key ( M3 )
           /* prettier-ignore */ '0xd31aBC7497aD8bC9fe8555C9eDe45DFd7FB3Bf6F': DevSecurityLevel.High, // test key ( M4 )
           /* prettier-ignore */ '0xe7e4cc292b424C6D50d16F1Bb5BAB2032c486980': DevSecurityLevel.High, // test key ( M5 )
+          /* prettier-ignore */ '0x0950C3Ecc7d1c4dd093C9652F335F9391d83Ee99': DevSecurityLevel.High, // test secure account 1
+          /* prettier-ignore */ '0x05b67C84bf88d93E795039d5bBA9CeC9Dcd93087': DevSecurityLevel.High, // test secure account 2
           // always prefix with prettier ignore
         },
         checkAddressFormat: true, //enabled for 1.10.0

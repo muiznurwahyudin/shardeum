@@ -5372,6 +5372,7 @@ const shardusSetup = (): void => {
           keys.targetKeys = [toShardusAddress(tx.operatorEVMAddress, AccountType.Account), networkAccount]
         } else if (isTransferFromSecureAccount(tx)) {
           const { sourceKeys, targetKeys } = crackTransferFromSecureAccount(tx)
+          console.log('crackTransferFromSecureAccount', { sourceKeys, targetKeys })
           keys.sourceKeys = sourceKeys
           keys.targetKeys = targetKeys
         }
@@ -7686,7 +7687,10 @@ const shardusSetup = (): void => {
             return Buffer.from(Utils.safeStringify(obj), 'utf8')
         }
       } catch (e) {
-        /* prettier-ignore */ if (logFlags.error) console.log('binarySerializeObject error:', e)
+        /* prettier-ignore */ if (logFlags.error) {
+          console.log('binarySerializeObject error:', e)
+          console.log('obj:', obj)
+        }
         nestedCountersInstance.countEvent('binarySerializeObject', 'error')
         return Buffer.from(Utils.safeStringify(obj), 'utf8')
       }

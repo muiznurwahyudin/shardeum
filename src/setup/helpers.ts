@@ -122,6 +122,7 @@ export function verifyMultiSigs(
 ): boolean {
   if (sigs.length < minSigRequired) return false
 
+  
   // no reason to allow more signatures than allowedPubkeys exist
   // this also prevent loop exhaustion
   if (sigs.length > Object.keys(allowedPubkeys).length) return false
