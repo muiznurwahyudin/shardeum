@@ -172,6 +172,7 @@ import { Sign, ServerMode } from '@shardus/core/dist/shardus/shardus-types'
 
 import { safeStringify } from '@shardus/types/build/src/utils/functions/stringify'
 import { initializeSerialization } from './utils/serialization/SchemaHelpers';
+import { getAccountData } from './utils/account'
 
 let latestBlock = 0
 export const blocks: BlockMap = {}
@@ -898,7 +899,7 @@ function getTransactionObj(
   } else throw Error('tx obj fail')
 }
 
-async function getReadableAccountInfo(account: WrappedEVMAccount): Promise<{
+export async function getReadableAccountInfo(account: WrappedEVMAccount): Promise<{
   nonce: string
   balance: string
   storageRoot: string
@@ -1504,8 +1505,8 @@ const configShardusEndpoints = (): void => {
 
   shardus.registerExternalGet('canUnstake/:nominee/:nominator', async (req, res) => {
     try {
-      const nominator = await getAccountData(req.params['nominator'], { query: {} })
-      const nominatee = await getAccountData(req.params['nominee'], { query: { type: 9 } })
+      const nominator = await getAccountData(shardus, req.params['nominator'], { query: {} })
+      const nominatee = await getAccountData(shardus, req.params['nominee'], { query: { type: 9 } })
       if (nominatee == null || nominator == null || nominator.account == null || nominatee.account == null) {
         return res.json({ error: 'account not found' })
       }
@@ -1651,66 +1652,12 @@ const configShardusEndpoints = (): void => {
 
     const address = req.params['address']
     try {
-      const accountData = await getAccountData(address, req)
+      const accountData = await getAccountData(shardus, address, req)
       res.json(accountData)
     } catch (error) {
       res.json({ error: error.message || 'An error occurred' })
     }
   })
-
-  async function getAccountData(address, req) {
-    if (address.length !== 42 && address.length !== 64) {
-      return { error: 'Invalid address' }
-    }
-
-    const id = shardus.getNodeId()
-    const isInRotationBonds = shardus.isNodeInRotationBounds(id)
-    if (isInRotationBonds) {
-      return { error: 'node close to rotation edges' }
-    }
-
-    if (!req.query.type) {
-      let shardusAddress = address.toLowerCase()
-      if (address.length === 42) {
-        shardusAddress = toShardusAddress(address, AccountType.Account)
-      }
-      const hexBlockNumber = req.query.blockNumber
-      const hexBlockNumberStr = isHexString(hexBlockNumber) ? hexBlockNumber : null
-
-      let data
-      if (isArchiverMode() && hexBlockNumberStr) {
-        data = await AccountsStorage.fetchAccountDataFromCollector(shardusAddress, hexBlockNumberStr)
-        if (!data) {
-          return { account: null }
-        }
-      } else {
-        const account = await shardus.getLocalOrRemoteAccount(shardusAddress)
-        if (!account) {
-          return { account: null }
-        }
-        data = account.data
-      }
-
-      fixDeserializedWrappedEVMAccount(data)
-      const readableAccount = await getReadableAccountInfo(data)
-      return readableAccount ? { account: readableAccount } : { account: data }
-    } else {
-      let accountType = parseInt(req.query.type)
-      if (AccountType[accountType] == null) {
-        return { error: 'Invalid account type' }
-      }
-
-      const secondaryAddressStr = (req.query.secondaryAddress || '').toString()
-      if (secondaryAddressStr && secondaryAddressStr.length !== 66) {
-        return { error: 'Invalid secondary address' }
-      }
-
-      const shardusAddress = toShardusAddressWithKey(address, secondaryAddressStr, accountType)
-      const account = await shardus.getLocalOrRemoteAccount(shardusAddress)
-      const readableAccount = convertBigIntsToHex(account)
-      return { account: readableAccount }
-    }
-  }
 
   shardus.registerExternalGet('eth_getCode', externalApiMiddleware, async (req, res) => {
     if (ShardeumFlags.disableSmartContractEndpoints) {
