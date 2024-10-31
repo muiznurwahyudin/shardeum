@@ -172,7 +172,13 @@ import { initAjvSchemas, verifyPayload } from './types/ajv/Helpers'
 import { Sign, ServerMode } from '@shardus/core/dist/shardus/shardus-types'
 
 import { safeStringify } from '@shardus/types/build/src/utils/functions/stringify'
-import { isTransferFromSecureAccount, crack as crackTransferFromSecureAccount, apply as applyTransferFromSecureAccount, secureAccountDataMap } from './shardeum/secureAccounts'
+import { 
+  isTransferFromSecureAccount, 
+  crack as crackTransferFromSecureAccount, 
+  apply as applyTransferFromSecureAccount, 
+  verify as verifyTransferFromSecureAccount,
+  secureAccountDataMap 
+} from './shardeum/secureAccounts'
 
 let latestBlock = 0
 export const blocks: BlockMap = {}
@@ -3944,6 +3950,9 @@ const shardusSetup = (): void => {
         if (appData.internalTx && appData.internalTXType === InternalTXType.Unstake) {
           verifyResult = verifyUnstakeTx(appData.internalTx, senderAddress, wrappedStates, shardus);
         }
+        if (appData.internalTx && appData.internalTXType === InternalTXType.TransferFromSecureAccount) {
+          verifyResult = verifyTransferFromSecureAccount(appData.internalTx, wrappedStates, shardus)
+        }
         if(verifyResult == null){
           verifyResult = {
             success: false,
@@ -5377,6 +5386,7 @@ const shardusSetup = (): void => {
           keys.targetKeys = targetKeys
         }
         keys.allKeys = keys.allKeys.concat(keys.sourceKeys, keys.targetKeys, keys.storageKeys)
+        console.log('crack', { keys })
         // temporary hack for creating a receipt of node reward tx
         // if (internalTx.internalTXType === InternalTXType.NodeReward) {
         //   if (ShardeumFlags.EVMReceiptsAsAccounts) {

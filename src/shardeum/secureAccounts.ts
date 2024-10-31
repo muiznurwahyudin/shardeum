@@ -96,11 +96,11 @@ interface CrackedData {
 export function crack(tx: TransferFromSecureAccount): CrackedData {
   return {
     sourceKeys: [
-      secureAccountDataMap.get(tx.accountName).SourceFundsAddress,
-      secureAccountDataMap.get(tx.accountName).SecureAccountAddress,
+      toShardusAddress(secureAccountDataMap.get(tx.accountName).SourceFundsAddress, AccountType.Account),
+      toShardusAddress(secureAccountDataMap.get(tx.accountName).SecureAccountAddress, AccountType.SecureAccount),
     ],
     targetKeys: [
-      secureAccountDataMap.get(tx.accountName).RecipientFundsAddress
+      toShardusAddress(secureAccountDataMap.get(tx.accountName).RecipientFundsAddress, AccountType.Account)
     ]
   }
 }
@@ -164,51 +164,51 @@ export function validateTransferFromSecureAccount(tx: TransferFromSecureAccount,
 
 export function verify(
   tx: TransferFromSecureAccount,
-  wrappedStates: AccountMap,
+  wrappedStates: WrappedStates,
   shardus: Shardus
-): { isValid: boolean; reason: string } {
+): { success: boolean; reason: string } {
   const commonValidation = validateTransferFromSecureAccount(tx, shardus)
   if (!commonValidation.success) {
-    return { isValid: false, reason: commonValidation.reason }
+    return { success: false, reason: commonValidation.reason }
   }
 
   const secureAccountConfig = secureAccountDataMap.get(tx.accountName)
   // this may be wrong, and its possible that I need to make wrappedStates give me this account as a wrapped evm account?
   // not sure but this is probably fine
-  const secureAccount = wrappedStates.get(secureAccountConfig.SecureAccountAddress) as unknown as SecureAccount
+  const secureAccount = wrappedStates[secureAccountConfig.SecureAccountAddress] as unknown as SecureAccount
 
   if (!secureAccount || secureAccount.accountType !== AccountType.SecureAccount) {
-    return { isValid: false, reason: 'Secure account not found or invalid' }
+    return { success: false, reason: 'Secure account not found or invalid' }
   }
 
-  const sourceFundsAccount = wrappedStates.get(secureAccountConfig.SourceFundsAddress) as WrappedEVMAccount
-  const recipientFundsAccount = wrappedStates.get(secureAccountConfig.RecipientFundsAddress) as WrappedEVMAccount
+  const sourceFundsAccount = wrappedStates[secureAccountConfig.SourceFundsAddress] as unknown as WrappedEVMAccount
+  const recipientFundsAccount = wrappedStates[secureAccountConfig.RecipientFundsAddress] as unknown as WrappedEVMAccount
 
   if (!sourceFundsAccount || !recipientFundsAccount) {
-    return { isValid: false, reason: 'Source or recipient account not found' }
+    return { success: false, reason: 'Source or recipient account not found' }
   }
 
   const transferAmount = BigInt(tx.amount)
   const sourceBalance = BigInt(sourceFundsAccount.account.balance)
 
   if (sourceBalance < transferAmount) {
-    return { isValid: false, reason: 'Insufficient balance in source account' }
+    return { success: false, reason: 'Insufficient balance in source account' }
   }
 
   if (tx.nonce !== Number(secureAccount.nonce)) {
-    return { isValid: false, reason: 'Invalid nonce' }
+    return { success: false, reason: 'Invalid nonce' }
   }
 
   const currentTime = Date.now()
   if (currentTime < secureAccount.nextTransferTime) {
-    return { isValid: false, reason: 'Transfer not allowed yet, time restriction' }
+    return { success: false, reason: 'Transfer not allowed yet, time restriction' }
   }
 
   if (transferAmount > secureAccount.nextTransferAmount) {
-    return { isValid: false, reason: 'Transfer amount exceeds allowed limit' }
+    return { success: false, reason: 'Transfer amount exceeds allowed limit' }
   }
 
-  return { isValid: true, reason: 'Valid transaction' }
+  return { success: true, reason: 'Valid transaction' }
 }
 
 export async function apply(

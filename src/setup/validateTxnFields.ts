@@ -42,7 +42,7 @@ import { validatePenaltyTX } from '../tx/penalty/transaction'
 import { bytesToHex } from '@ethereumjs/util'
 import { logFlags, shardusConfig } from '..'
 import { Sign } from '@shardus/core/dist/shardus/shardus-types'
-import { verify as verifyTransferFromSecureAccount } from '../shardeum/secureAccounts'
+import { validateTransferFromSecureAccount } from '../shardeum/secureAccounts'
 
 /**
  * Checks that Transaction fields are valid
@@ -188,10 +188,10 @@ export const validateTxnFields =
         } else if (tx.internalTXType === InternalTXType.TransferFromSecureAccount) {
           const transferTx = tx as TransferFromSecureAccount
           // Perform thorough verification
-          const verifyResult = verifyTransferFromSecureAccount(transferTx, appData.wrappedStates, shardus)
-          if (!verifyResult) {
+          const verifyResult = validateTransferFromSecureAccount(transferTx, shardus)
+          if (!verifyResult.success) {
             return {
-              success: false,
+              success,
               reason: verifyResult.reason,
               txnTimestamp,
             }
