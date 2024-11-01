@@ -2424,7 +2424,7 @@ const configShardusNetworkTransactions = (): void => {
       const account = await shardus.getLocalOrRemoteAccount(shardusAddress)
       if (!account) {
         console.log(`Account for shardus address ${shardusAddress} not found, removing tx`)
-        return true
+        throw new Error(`Account for shardus address ${shardusAddress} not found, removing tx`)
       }
       const data = account.data as NodeAccount2
       const appliedEntry = data.rewardEndTime === tx.endTime
@@ -2481,7 +2481,7 @@ const configShardusNetworkTransactions = (): void => {
       const account = await shardus.getLocalOrRemoteAccount(shardusAddress)
       if (!account) {
         console.log(`Account for shardus address ${shardusAddress} not found, removing tx`)
-        return true
+        throw new Error(`Account for shardus address ${shardusAddress} not found, removing tx`)
       }
       const data = account.data as NodeAccount2
 
