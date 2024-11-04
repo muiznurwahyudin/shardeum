@@ -190,36 +190,52 @@ describe('secureAccounts', () => {
         [testAddress]: 2
       })
 
-      const wrappedStates = new Map([
-        ['1f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C000000000000000000000000', {
-          ethAddress: '1f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C000000000000000000000000',
-          hash: '',
+      const wrappedStates = {
+        '1f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C000000000000000000000000': {
+          accountId: '1f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C000000000000000000000000',
+          stateId: '1f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C000000000000000000000000',
           timestamp: Date.now(),
           accountType: AccountType.SecureAccount,
-          nonce: 0,
-          name: 'Foundation',
-          nextTransferAmount: BigInt('1000000000000000000'),
-          nextTransferTime: 0
-        }],
-        ['0x1f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C', {
-          ethAddress: '0x1f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C',
-          hash: '',
+          data: {
+            hash: '',
+            timestamp: Date.now(),
+            accountType: AccountType.SecureAccount,
+            nonce: 0,
+            name: 'Foundation',
+            nextTransferAmount: BigInt('1000000000000000000'),
+            nextTransferTime: 0
+          }
+        },
+        '0x1f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C': {
+          accountId: '0x1f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C',
+          stateId: '0x1f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C',
           timestamp: Date.now(),
           accountType: AccountType.Account,
-          account: { balance: '2000000000000000000' }
-        }],
-        ['0x2f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C', {
-          ethAddress: '0x2f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C',
-          hash: '',
+          data: {
+            ethAddress: '0x1f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C',
+            hash: '',
+            timestamp: Date.now(),
+            account: { balance: BigInt('2000000000000000000') }
+          }
+        },
+        '0x2f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C': {
+          accountId: '0x2f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C',
+          stateId: '0x2f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C',
           timestamp: Date.now(),
           accountType: AccountType.Account,
-          account: { balance: '0' }
-        }]
-      ]) as AccountMap
+          data: {
+            ethAddress: '0x2f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C',
+            hash: '',
+            timestamp: Date.now(),
+            accountType: AccountType.Account,
+            account: { balance: BigInt('0') }
+          }
+        }
+      } as WrappedStates
 
       const result = verify(validTx, wrappedStates, shardus)
       expect(result.reason).toBe('Valid transaction')
-      expect(result.isValid).toBe(true)
+      expect(result.success).toBe(true)
     })
   })
 
@@ -246,7 +262,7 @@ describe('secureAccounts', () => {
             accountType: AccountType.Account,
             account: {
               nonce: 0,
-              balance: '55880000000000000000000000'
+              balance: BigInt('55880000000000000000000000')
             }
           }
         },
@@ -261,7 +277,7 @@ describe('secureAccounts', () => {
             accountType: AccountType.Account,
             account: {
               nonce: 0,
-              balance: '0'
+              balance: BigInt('0')
             }
           }
         },

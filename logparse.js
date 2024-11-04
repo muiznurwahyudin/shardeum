@@ -29,7 +29,12 @@ let stats = {
         versionMismatches: 0,
         certIssues: 0,
         networkAccountIssues: 0,
-        archiverFetchFailures: 0
+        archiverFetchFailures: 0,
+        hashMismatches: {
+            total: 0,
+            accounts: new Map(),
+            dataSyncFailures: 0
+        }
     },
     archiverStats: {
         totalReceipts: 0,
@@ -110,6 +115,33 @@ async function processValidatorLog(port) {
             // Track certificate issues with more detail
             if (message.includes('stakeCert is expired') || message.includes('invalid cert')) {
                 stats.validatorStats.certIssues++;
+            }
+
+            // Track hash mismatch errors
+            if (message.includes('setAccountData hash test failed')) {
+                stats.validatorStats.hashMismatches.total++;
+                
+                // Extract account details if available
+                if (message.includes('details:')) {
+                    try {
+                        const detailsStr = message.split('details: ')[1];
+                        const details = JSON.parse(detailsStr);
+                        stats.validatorStats.hashMismatches.accounts.set(details.id, {
+                            expectedHash: message.match(/expected account hash: ([^ ]+)/)?.[1],
+                            actualHash: message.match(/got ([^ ]+)/)?.[1],
+                            accountType: details.accountType,
+                            name: details.name,
+                            timestamp: details.timestamp
+                        });
+                    } catch (parseErr) {
+                        // Continue if we can't parse the details
+                    }
+                }
+            }
+
+            // Track data sync failures
+            if (message.includes('DATASYNC: processAccountData failed hashes:')) {
+                stats.validatorStats.hashMismatches.dataSyncFailures++;
             }
 
         } catch (err) {
@@ -465,6 +497,17 @@ async function main() {
         }
         if (vStats.archiverFetchFailures > 0) {
             console.log(`  • Archiver Fetch Failures: ${vStats.archiverFetchFailures}`);
+        }
+        if (vStats.hashMismatches.total > 0) {
+            console.log(`  • Hash Mismatches: ${vStats.hashMismatches.total}`);
+            console.log(`  • Data Sync Failures: ${vStats.hashMismatches.dataSyncFailures}`);
+            console.log('\nAffected Accounts:');
+            vStats.hashMismatches.accounts.forEach((details, accountId) => {
+                console.log(`    - ${accountId} (${details.name}):`);
+                console.log(`      Expected hash: ${details.expectedHash}`);
+                console.log(`      Actual hash: ${details.actualHash}`);
+                console.log(`      Account type: ${details.accountType}`);
+            });
         }
     } else {
         console.log('No validator issues detected');

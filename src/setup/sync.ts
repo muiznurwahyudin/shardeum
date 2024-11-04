@@ -14,7 +14,7 @@ import { sleep } from '../utils'
 import { DefaultStateManager } from '@ethereumjs/statemanager'
 import { logFlags, shardeumGetTime } from '..'
 import { Utils } from '@shardus/types'
-import { initializeSecureAccount, SecureAccountConfig, SecureAccount, serializeSecureAccount } from '../shardeum/secureAccounts'
+import { initializeSecureAccount, SecureAccountConfig } from '../shardeum/secureAccounts'
 
 function isDebugMode(): boolean {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -103,18 +103,27 @@ export const sync = (shardus: Shardus, evmCommon: any) => async (): Promise<void
             cycles
           );
           
-          const serializedSecureAccount = serializeSecureAccount(secureAccount);
+          // const serializedSecureAccount = serializeSecureAccount(secureAccount);
+          // const accountCopy: ShardusTypes.AccountsCopy = {
+          //   cycleNumber: cycles[0].counter,
+          //   accountId: serializedSecureAccount.id,
+          //   data: serializedSecureAccount,
+          //   hash: serializedSecureAccount.hash,
+          //   isGlobal: false,
+          //   timestamp: serializedSecureAccount.timestamp,
+          // };
+
           const accountCopy: ShardusTypes.AccountsCopy = {
             cycleNumber: cycles[0].counter,
-            accountId: serializedSecureAccount.id,
-            data: serializedSecureAccount,
-            hash: serializedSecureAccount.hash,
+            accountId: secureAccount.id,
+            data: secureAccount,
+            hash: secureAccount.hash,
             isGlobal: false,
-            timestamp: serializedSecureAccount.timestamp,
+            timestamp: secureAccount.timestamp,
           };
          
           accountCopies.push(accountCopy);
-          /* prettier-ignore */ if (logFlags.important_as_error) shardus.log(`node ${nodeId} SETUP GENESIS SECUREACCOUNT: ${serializedSecureAccount.id}`);
+          /* prettier-ignore */ if (logFlags.important_as_error) shardus.log(`node ${nodeId} SETUP GENESIS SECUREACCOUNT: ${secureAccount.id}`);
         }
 
         /* prettier-ignore */ if (logFlags.important_as_error) console.log(`Skipped ${skippedAccountCount} genesis accounts`)

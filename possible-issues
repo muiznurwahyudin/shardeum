@@ -1,0 +1,12 @@
+Open Questions:
+- crack logs a lot, but nothing else after that - possibly an error happening after crack (on shardus-core side)
+- make sure you turn on more verbose logging when testing
+- does nonce need to be increased on the source account?
+- use applyResponseSetFailed when there is an error with apply (applyClaimRewardTx does it)
+- The recipient of a secure account transfer is an EVMWrapped account - does updating its balance require doing the stateManager.checkpoint + putAccount + commit?
+- Why do none of the other apply fns calculate the hashes manually? Maybe this is already handled by applyResponseAddChangedAccount?
+- Do we need to generate a receipt for the transfer from source to receipient seperately from the receipt for the secure account transfer multisig itself?
+- Timestamp for tx is calculated as the cycle time * 1000, im not actually sure if thats correct or not.
+
+Addressed:
+- secure account timestamp not being updated in tx apply

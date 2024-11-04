@@ -258,7 +258,7 @@ export interface WrappedAccount {
   // this affects src/index.ts which is being worked on in another branch
   // I don't want to merge this branch until that one is merged
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any //NetworkAccount | NodeAccount2 | WrappedEVMAccount
+  data: any //NetworkAccount | NodeAccount2 | WrappedEVMAccount | SecureAccount
   timestamp: number
   accountCreated?: boolean
 }

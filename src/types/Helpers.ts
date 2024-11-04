@@ -108,6 +108,9 @@ export const accountDeserializer = <T extends BaseAccount>(data: Buffer): T => {
       nestedCountersInstance.countEvent('binaryDeserialize', 'WrappedEVMAccount')
       return deserializeWrappedEVMAccount(payloadStream) as unknown as T
     default:
+      console.log('--------------------------------');
+      console.log('HIT DEFAULT CASE FORUnknownAccType:', payloadType);
+      console.log('--------------------------------');
       nestedCountersInstance.countEvent('binaryDeserialize', `UnknownAccType-${payloadType}`)
       return Utils.safeJsonParse(payloadStream.readString()) as unknown as T
   }

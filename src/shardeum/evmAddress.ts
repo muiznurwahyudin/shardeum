@@ -231,6 +231,7 @@ export function toShardusAddress(addressStr: string, accountType: AccountType): 
     accountType === AccountType.Receipt ||
     accountType === AccountType.StakeReceipt ||
     accountType === AccountType.UnstakeReceipt ||
+    accountType === AccountType.SecureAccount ||
     accountType === AccountType.InternalTxReceipt
   ) {
     if (addressStr.length === 66) {

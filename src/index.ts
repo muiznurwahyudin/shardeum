@@ -2245,7 +2245,7 @@ const configShardusEndpoints = (): void => {
       // for each secure account, we need to get the data
       const secureAccounts = []
       // use AccountsStorage.getAccount for each secureAccount.sourceFundsAddress && secureAccount.recipientFundsAddress
-      for (const secureAccountConfig of Object.values(secureAccountDataMap)) {
+      for (const secureAccountConfig of secureAccountDataMap.values()) {
         const secureAccount = await AccountsStorage.getAccount(secureAccountConfig.SecureAccountAddress)
         const sourceAccount = await AccountsStorage.getAccount(secureAccountConfig.SourceFundsAddress)
         const recipientAccount = await AccountsStorage.getAccount(secureAccountConfig.RecipientFundsAddress)
@@ -2861,14 +2861,22 @@ async function applyInternalTx(
     applyPenaltyTX(shardus, penaltyTx, wrappedStates, txId, txTimestamp, applyResponse)
   }
   if (internalTx.internalTXType === InternalTXType.TransferFromSecureAccount) {
-    await applyTransferFromSecureAccount(
-      internalTx as unknown as TransferFromSecureAccount,
-      txId,
-      wrappedStates, 
-      shardus,
-      applyResponse
-    );
-    return applyResponse;
+    console.log('Applying transfer from secure account...', internalTx);
+    try {
+      await applyTransferFromSecureAccount(
+        internalTx as unknown as TransferFromSecureAccount,
+        txId,
+        txTimestamp,
+        wrappedStates,
+        shardus,
+        applyResponse
+      );
+      console.log('Successfully applied transfer from secure account!');
+      return applyResponse;
+    } catch (e) {
+      console.log('Error applying transfer from secure account!', JSON.stringify(internalTx, null, 2));
+      throw e;
+    }
   }
   return applyResponse
 }
@@ -3911,6 +3919,7 @@ const shardusSetup = (): void => {
       }
 
       if (isInternalTx(tx)) {
+        console.log('Applying internal tx...', tx);
         return applyInternalTx(tx, wrappedStates, txTimestamp)
       }
 
@@ -3952,6 +3961,7 @@ const shardusSetup = (): void => {
         }
         if (appData.internalTx && appData.internalTXType === InternalTXType.TransferFromSecureAccount) {
           verifyResult = verifyTransferFromSecureAccount(appData.internalTx, wrappedStates, shardus)
+          console.log('Verified Secure Account Transfer:', verifyResult, wrappedStates);
         }
         if(verifyResult == null){
           verifyResult = {
@@ -3961,6 +3971,7 @@ const shardusSetup = (): void => {
         }
       } catch (error) {
         if (ShardeumFlags.VerboseLogs) console.log(`Stake/Unstake tx verification failed, reason: ${error}`)
+          console.log('Rejecting tx because of verify error:', error);
         verifyResult = {
           success: false,
           reason: error
@@ -5290,12 +5301,13 @@ const shardusSetup = (): void => {
         }
         /* prettier-ignore */ if (ShardeumFlags.VerboseLogs) console.log( `txPreCrackData final result: txNonce: ${appData.txNonce}, currentNonce: ${ appData.nonce }, queueCount: ${appData.queueCount}, appData ${Utils.safeStringify(appData)}` )
       }
-      
+      console.log('txPreCrackData final result', { passed: true, appData })
       return { status: true, reason: 'Passed' }
     },
 
     //@ts-ignore
     crack(timestampedTx, appData) {
+      console.log('starting crack', { timestampedTx, appData })
       if (ShardeumFlags.VerboseLogs) console.log('Running getKeyFromTransaction', timestampedTx)
       //@ts-ignore
       const { tx } = timestampedTx
@@ -5386,7 +5398,7 @@ const shardusSetup = (): void => {
           keys.targetKeys = targetKeys
         }
         keys.allKeys = keys.allKeys.concat(keys.sourceKeys, keys.targetKeys, keys.storageKeys)
-        console.log('crack', { keys })
+       
         // temporary hack for creating a receipt of node reward tx
         // if (internalTx.internalTXType === InternalTXType.NodeReward) {
         //   if (ShardeumFlags.EVMReceiptsAsAccounts) {
@@ -5397,6 +5409,7 @@ const shardusSetup = (): void => {
 
         const txId = generateTxId(tx)
         if (ShardeumFlags.VerboseLogs) console.log('crack', { timestamp, keys, id: txId })
+        console.log('crack final result', { timestamp, keys, id: customTXhash ?? txId })
         return {
           timestamp,
           keys,
