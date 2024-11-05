@@ -1329,7 +1329,7 @@ const configShardusEndpoints = (): void => {
     if (ShardeumFlags.disableSmartContractEndpoints) {
       return res.json({ result: null, error: 'Smart contract endpoints are disabled' })
     }
-    
+
     try {
       const id = shardus.getNodeId()
       const isInRotationBonds = shardus.isNodeInRotationBounds(id)
@@ -2827,11 +2827,15 @@ async function applyInternalTx(
       txTimestamp,
       applyResponse,
       mustUseAdminCert
+    ).catch((error) => {
+      /* prettier-ignore */ if (logFlags.error) console.error('Error in applyClaimRewardTX', error)}
     )
   }
   if (internalTx.internalTXType === InternalTXType.Penalty) {
     const penaltyTx = internalTx as PenaltyTX
-    applyPenaltyTX(shardus, penaltyTx, wrappedStates, txId, txTimestamp, applyResponse)
+    applyPenaltyTX(shardus, penaltyTx, wrappedStates, txId, txTimestamp, applyResponse).catch((error) => {
+      /* prettier-ignore */ if (logFlags.error) console.error('Error in applyPenaltyTX', error)
+    })
   }
   return applyResponse
 }
@@ -7037,7 +7041,7 @@ const shardusSetup = (): void => {
         // There are important roadblocks checks above for when we do have the network account loaded
         // we should not skip ahead until we are passing the if condition above
         /* prettier-ignore */ nestedCountersInstance.countEvent('shardeum-staking', `network account not available yet`)
-        return false 
+        return false
       }
 
       isReadyToJoinLatestValue = false
@@ -7800,7 +7804,7 @@ async function fetchNetworkAccountFromArchiver(): Promise<WrappedAccount> {
         sign: {
           owner: string,
           sig: string
-        } 
+        }
       }>(
         `http://${archiver.ip}:${archiver.port}/get-network-account?hash=true`
       )
