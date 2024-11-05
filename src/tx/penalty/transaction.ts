@@ -172,8 +172,8 @@ export function clearOldPenaltyTxs(shardus: Shardus): void {
 
 export function validatePenaltyTX(txId: string, tx: PenaltyTX, isApply = false): { isValid: boolean; reason: string } {
   const errors = verifyPayload(AJVSchemaEnum.PenaltyTx, tx)
-  if (errors !== null) {
-    nestedCountersInstance.countEvent('external', 'ajv-failed-query-certificate')
+  if (errors != null) {
+    nestedCountersInstance.countEvent('external', 'ajv-failed-penalty-tx')
     return { isValid: false, reason: 'Invalid penalty tx' }
   }
   // this check should happen only for exe nodes applying the penalty tx
