@@ -171,6 +171,7 @@ import { initAjvSchemas, verifyPayload } from './types/ajv/Helpers'
 import { Sign, ServerMode } from '@shardus/core/dist/shardus/shardus-types'
 
 import { safeStringify } from '@shardus/types/build/src/utils/functions/stringify'
+import { initializeSerialization } from './utils/serialization/SchemaHelpers';
 
 let latestBlock = 0
 export const blocks: BlockMap = {}
@@ -559,6 +560,7 @@ async function initEVMSingletons(): Promise<void> {
 
 initEVMSingletons()
 initAjvSchemas()
+initializeSerialization()
 
 /***
  *     ######     ###    ##       ##       ########     ###     ######  ##    ##  ######

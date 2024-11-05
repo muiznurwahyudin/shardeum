@@ -1,5 +1,5 @@
 import {AJVSchemaEnum} from '../enum/AJVSchemaEnum';
-import {addSchema, addSchemaDependency} from '../../utils/serialization/SchemaHelpers';
+import {addSchema} from '../../utils/serialization/SchemaHelpers';
 import {InternalTXType, ViolationType} from '../../shardeum/shardeumTypes';
 
 export const schemaInternalTxBase = {
@@ -56,13 +56,13 @@ export const schemaPenaltyTX = {
     violationType: { enum: Object.values(ViolationType) },
     violationData: {
       anyOf: [
-        { $ref: 'LeftNetworkEarlyViolationData' },
-        { $ref: 'SyncingTimeoutViolationData' },
-        { $ref: 'NodeRefutedViolationData' }
+        { $ref: AJVSchemaEnum.LeftNetworkEarlyViolationData },
+        { $ref: AJVSchemaEnum.SyncingTimeoutViolationData },
+        { $ref: AJVSchemaEnum.NodeRefutedViolationData }
       ]
     },
     timestamp: { type: 'number', exclusiveMinimum: 0 },
-    sign: { $ref: 'Sign' },
+    sign: { $ref: AJVSchemaEnum.Sign },
     isInternalTx: { type: 'boolean' },
     internalTXType: { enum: Object.values(InternalTXType) }
   },
@@ -81,24 +81,14 @@ export const schemaPenaltyTX = {
 };
 
 export function initPenaltyTX(): void {
-  addSchemaDependencies()
   addSchemas()
-}
-
-// Function to add schema dependencies
-function addSchemaDependencies(): void {
-  addSchemaDependency(AJVSchemaEnum.InternalTxBase, AJVSchemaEnum.PenaltyTx);
-  addSchemaDependency(AJVSchemaEnum.LeftNetworkEarlyViolationData, AJVSchemaEnum.PenaltyTx);
-  addSchemaDependency(AJVSchemaEnum.SyncingTimeoutViolationData, AJVSchemaEnum.PenaltyTx);
-  addSchemaDependency(AJVSchemaEnum.NodeRefutedViolationData, AJVSchemaEnum.PenaltyTx);
-  addSchemaDependency(AJVSchemaEnum.Sign, AJVSchemaEnum.PenaltyTx);
 }
 
 // Function to register the schema
 function addSchemas(): void {
-  addSchema(AJVSchemaEnum.PenaltyTx, schemaPenaltyTX)
   addSchema(AJVSchemaEnum.InternalTxBase, schemaInternalTxBase);
   addSchema(AJVSchemaEnum.LeftNetworkEarlyViolationData, schemaLeftNetworkEarlyViolationData);
   addSchema(AJVSchemaEnum.SyncingTimeoutViolationData, schemaSyncingTimeoutViolationData);
   addSchema(AJVSchemaEnum.NodeRefutedViolationData, schemaNodeRefutedViolationData);
+  addSchema(AJVSchemaEnum.PenaltyTx, schemaPenaltyTX)
 }
