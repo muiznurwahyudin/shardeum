@@ -190,12 +190,9 @@ export function verify(
   }
 
   const secureAccountConfig = secureAccountDataMap.get(tx.accountName)
-  // this may be wrong, and its possible that I need to make wrappedStates give me this account as a wrapped evm account?
-  // not sure but this is probably fine
   const secureAccount = wrappedStates[secureAccountConfig.SecureAccountAddress] as WrappedAccount
 
   if (!secureAccount || secureAccount.data.accountType !== AccountType.SecureAccount) {
-    console.log('Secure account not found or invalid for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Secure account not found or invalid' }
   }
 
@@ -203,7 +200,6 @@ export function verify(
   const recipientFundsAccount = wrappedStates[secureAccountConfig.RecipientFundsAddress] as WrappedAccount
 
   if (!sourceFundsAccount || !recipientFundsAccount) {
-    console.log('Source or recipient account not found for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Source or recipient account not found' }
   }
 
@@ -211,24 +207,25 @@ export function verify(
   const sourceBalance = BigInt(sourceFundsAccount.data.account.balance)
 
   if (sourceBalance < transferAmount) {
-    console.log('Insufficient balance in source account for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Insufficient balance in source account' }
+  }
+
+  // assert that the result of the balance subtraction has not overflowed or underflowed
+  if (sourceBalance - transferAmount < 0) {
+    return { success: false, reason: 'Balance subtraction would overflow' }
   }
 
   // assert that the nonce is the next consecutive number
   if (tx.nonce !== Number(secureAccount.data.nonce) + 1) {
-    console.log('Invalid nonce for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Invalid nonce' }
   }
 
   const currentTime = Date.now()
   if (currentTime < secureAccount.data.nextTransferTime) {
-    console.log('Transfer not allowed yet, time restriction!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Transfer not allowed yet, time restriction' }
   }
 
   if (transferAmount > secureAccount.data.nextTransferAmount) {
-    console.log('Transfer amount exceeds allowed limit!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Transfer amount exceeds allowed limit' }
   }
 
@@ -244,23 +241,13 @@ export async function apply(
   applyResponse: ShardusTypes.ApplyResponse
 ): Promise<void> {
   const secureAccountConfig = secureAccountDataMap.get(tx.accountName)
-  // throw if the secure account config is not found
-  if (!secureAccountConfig) {
-    console.log('Secure account config not found for transfer from secure account!', JSON.stringify(tx, null, 2));
-    throw new Error('Secure account config not found');
-  }
-  
+
   const sourceEOA = wrappedStates[toShardusAddress(secureAccountConfig.SourceFundsAddress, AccountType.Account)];
   const destEOA = wrappedStates[toShardusAddress(secureAccountConfig.RecipientFundsAddress, AccountType.Account)];
   const secureAccount = wrappedStates[toShardusAddress(secureAccountConfig.SecureAccountAddress, AccountType.SecureAccount)];
 
   // throw if any of the required accounts are not found
   if (!sourceEOA || !destEOA || !secureAccount) {
-    console.log('One or more required accounts not found for transfer from secure account!', JSON.stringify(tx, null, 2));
-    console.log('sourceEOA address:', secureAccountConfig.SourceFundsAddress);
-    console.log('destEOA address:', secureAccountConfig.RecipientFundsAddress);
-    console.log('secureAccount address:', secureAccountConfig.SecureAccountAddress);
-    console.log('wrappedStates:', wrappedStates);
     throw new Error('One or more required accounts not found');
   }
 
@@ -268,26 +255,10 @@ export async function apply(
   const destEOAData = destEOA.data as WrappedEVMAccount;
   const secureAccountData = secureAccount.data as SecureAccount;
 
-  if (!sourceEOA || !destEOA || !secureAccount) {
-    console.log('One or more required accounts not found for transfer from secure account!', JSON.stringify(tx, null, 2));
-    throw new Error('One or more required accounts not found');
-  }
-
   const amount = BigInt(tx.amount);
 
-  if (BigInt(sourceEOAData.account.balance) < amount) {
-    console.log('Insufficient balance in source account for transfer from secure account!', JSON.stringify(tx, null, 2));
-    throw new Error(`Insufficient balance in source account for transfer from secure account! ${sourceEOAData.account.balance} < ${amount}`);
-  }
-
-  // assert that the result of the balance subtraction has not overflowed or underflowed
-  if (BigInt(sourceEOAData.account.balance) - amount < 0) {
-    console.log('Balance subtraction overflowed for source account for transfer from secure account!', JSON.stringify(tx, null, 2));
-    throw new Error('Balance subtraction overflowed');
-  }
-
   sourceEOAData.account.balance = BigInt(sourceEOAData.account.balance) - amount
-  sourceEOAData.account.nonce = sourceEOAData.account.nonce + BigInt(1)
+  sourceEOAData.account.nonce += BigInt(1)
   destEOAData.account.balance = BigInt(destEOAData.account.balance) + amount
 
   // update timestamp for each account
@@ -295,61 +266,37 @@ export async function apply(
   destEOAData.timestamp = txTimestamp;
   secureAccountData.timestamp = txTimestamp;
 
-  secureAccountData.nonce = tx.nonce;
-  
-  // consolelog the hashes before and after
-  const hashesBefore = {
-    sourceEOA: sourceEOAData.hash,
-    destEOA: destEOAData.hash,
-    secureAccount: secureAccountData.hash
-  };
-  console.log('Hashes before:', hashesBefore);
+  secureAccountData.nonce += 1;
+
   updateEthAccountHash(sourceEOAData);
   updateEthAccountHash(destEOAData);
   updateEthAccountHash(secureAccountData);
-  const hashesAfter = {
-    sourceEOA: sourceEOAData.hash,
-    destEOA: destEOAData.hash,
-    secureAccount: secureAccountData.hash
-  };
-  console.log('Hashes after:', hashesAfter);
+  
   const wrappedSourceEOA = _shardusWrappedAccount(sourceEOAData);
   const wrappedDestEOA = _shardusWrappedAccount(destEOAData);
   const wrappedSecureAccount = _shardusWrappedAccount(secureAccountData);
-  const wrappedHashes = {
-    sourceEOA: (wrappedSourceEOA.data as any).hash,
-    destEOA: (wrappedDestEOA.data as any).hash,
-    secureAccount: (wrappedSecureAccount.data as any).hash
-  };
-  console.log('Wrapped hashes:', wrappedHashes);
 
-  try {
-    shardus.applyResponseAddChangedAccount(
-      applyResponse,
-      toShardusAddress(secureAccountConfig.SourceFundsAddress, AccountType.Account),
-      wrappedSourceEOA as ShardusTypes.WrappedResponse,
-      txId,
-      applyResponse.txTimestamp
-    );
-    shardus.applyResponseAddChangedAccount(
-      applyResponse,
-      toShardusAddress(secureAccountConfig.RecipientFundsAddress, AccountType.Account),
-      wrappedDestEOA as ShardusTypes.WrappedResponse,
-      txId,
-      applyResponse.txTimestamp
-    );
-    shardus.applyResponseAddChangedAccount(
-      applyResponse,
-      toShardusAddress(secureAccountConfig.SecureAccountAddress, AccountType.SecureAccount),
-      wrappedSecureAccount as ShardusTypes.WrappedResponse,
-      txId,
-      applyResponse.txTimestamp
-    );
-  } catch (e) {
-    console.log('Error adding changed account for transfer from secure account!', JSON.stringify(tx, null, 2));
-    throw e;
-  }
-  console.log('Successfully added changed accounts for transfer from secure account!');
+  shardus.applyResponseAddChangedAccount(
+    applyResponse,
+    toShardusAddress(secureAccountConfig.SourceFundsAddress, AccountType.Account),
+    wrappedSourceEOA as ShardusTypes.WrappedResponse,
+    txId,
+    applyResponse.txTimestamp
+  );
+  shardus.applyResponseAddChangedAccount(
+    applyResponse,
+    toShardusAddress(secureAccountConfig.RecipientFundsAddress, AccountType.Account),
+    wrappedDestEOA as ShardusTypes.WrappedResponse,
+    txId,
+    applyResponse.txTimestamp
+  );
+  shardus.applyResponseAddChangedAccount(
+    applyResponse,
+    toShardusAddress(secureAccountConfig.SecureAccountAddress, AccountType.SecureAccount),
+    wrappedSecureAccount as ShardusTypes.WrappedResponse,
+    txId,
+    applyResponse.txTimestamp
+  );
 
   if (ShardeumFlags.supportInternalTxReceipt) {
     createInternalTxReceipt(
