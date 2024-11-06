@@ -1,7 +1,7 @@
 import { initializeSecureAccount, isSecureAccount, SecureAccount, SecureAccountConfig, validateTransferFromSecureAccount, verify, apply } from '../../../../src/shardeum/secureAccounts'
 import { ShardeumFlags } from '../../../../src/shardeum/shardeumFlags'
 import * as WrappedEVMAccountFunctions from '../../../../src/shardeum/wrappedEVMAccountFunctions'
-import { AccountMap, AccountType, InternalTXType, TransferFromSecureAccount, WrappedStates } from '../../../../src/shardeum/shardeumTypes'
+import { AccountMap, AccountType, InternalTx, InternalTXType, WrappedStates } from '../../../../src/shardeum/shardeumTypes'
 import { Shardus } from '@shardus/core'
 import { shardusConfig } from '../../../../src'
 import { VectorBufferStream } from '@shardus/core'
@@ -106,7 +106,6 @@ describe('secureAccounts', () => {
       })
 
       const txData = {
-        txType: InternalTXType.TransferFromSecureAccount,
         amount: '1000000000000000000',
         accountName: 'Foundation',
         nonce: 0
@@ -124,7 +123,7 @@ describe('secureAccounts', () => {
         }],
         isInternalTx: true,
         internalTXType: InternalTXType.TransferFromSecureAccount
-      } as TransferFromSecureAccount
+      } as InternalTx
 
       const result = validateTransferFromSecureAccount(validTx, shardus)
       expect(result.reason).toBe('')
@@ -183,8 +182,9 @@ describe('secureAccounts', () => {
           sig: signature
         }],
         isInternalTx: true,
-        internalTXType: InternalTXType.TransferFromSecureAccount
-      } as TransferFromSecureAccount
+        internalTXType: InternalTXType.TransferFromSecureAccount,
+        timestamp: Date.now()
+      } as InternalTx
 
       ;(shardus.getMultisigPublicKeys as jest.Mock).mockReturnValue({
         [testAddress]: 2
@@ -242,13 +242,13 @@ describe('secureAccounts', () => {
   describe('apply', () => {
     it('should apply a valid transfer transaction', async () => {
       const tx = {
-        txType: InternalTXType.TransferFromSecureAccount,
         amount: '1000000000000000000',
         accountName: 'Foundation',
         nonce: 0,
         isInternalTx: true,
         internalTXType: InternalTXType.TransferFromSecureAccount,
-      } as const
+        timestamp: Date.now()
+      } as InternalTx
 
       const wrappedStates: WrappedStates = {
         '0x1f1545Eb7EE5C3C1c4784ee9ddE5D26A9f76F77C': {
@@ -309,59 +309,16 @@ describe('secureAccounts', () => {
         failed: false,
         failMessage: '',
         appReceiptDataHash: ''
-      };
+      } ;
       try {
-        await apply(tx, 'txId', wrappedStates, shardus, applyResponse);
+        await apply(tx, 'txId', Date.now(), wrappedStates, shardus, applyResponse);
       } catch (error) {
         console.error('Full error:', error);
         console.error('Stack trace:', error.stack);
         throw error;
       }
-      await expect(apply(tx, 'txId', wrappedStates, shardus, applyResponse))
+      await expect(apply(tx, 'txId', Date.now(), wrappedStates, shardus, applyResponse))
         .resolves.not.toThrow()
     })
   })
-})
-
-describe('SecureAccount Serialization', () => {
-  const validSecureAccount = {
-    id: 'test-id',
-    hash: 'test-hash',
-    timestamp: 12345,
-    accountType: AccountType.SecureAccount,
-    name: 'test-account',
-    nextTransferAmount: BigInt(1000),
-    nextTransferTime: 67890,
-    nonce: 1
-  }
-
-  it('should serialize and deserialize a secure account correctly', () => {
-    const stream = new VectorBufferStream(2048)
-    
-    console.log('Before serialization:', validSecureAccount)
-    serializeSecureAccount(stream, validSecureAccount, true)
-    console.log('Buffer position after serialization:', stream.position)
-    
-    stream.position = 0
-    const type = stream.readUInt16()
-    console.log('After reading type:', stream.position)
-    
-    try {
-      const id = stream.readString()
-      console.log('After reading id:', stream.position)
-      
-      const hash = stream.readString()
-      console.log('After reading hash:', stream.position)
-      
-      const timestamp = stream.readBigUInt64()
-      console.log('After reading timestamp:', stream.position)
-      
-      // ... continue with other fields
-    } catch (error) {
-      console.error('Failed at position:', stream.position)
-      console.error('Error:', error)
-    }
-  })
-
-  // Remove or comment out other tests temporarily to focus on this one
 })

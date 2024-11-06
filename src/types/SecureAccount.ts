@@ -6,8 +6,18 @@ import { TypeIdentifierEnum } from './enum/TypeIdentifierEnum'
 import { SecureAccount } from '../shardeum/secureAccounts'
 import { deserializeBaseAccount, serializeBaseAccount } from './BaseAccount'
 
+function validateSecureAccount(obj: SecureAccount) {
+  if (typeof obj.id !== 'string' || typeof obj.hash !== 'string' || typeof obj.timestamp !== 'number' || typeof obj.name !== 'string' || typeof obj.nextTransferAmount !== 'bigint' || typeof obj.nextTransferTime !== 'number' || typeof obj.nonce !== 'number') {
+    console.log('Invalid SecureAccount object', obj)
+    process.exit(1)
+  } 
+} 
+
 const cSecureAccountVersion = 1
 export function serializeSecureAccount(stream: VectorBufferStream, obj: SecureAccount, root = false): void {
+  // Apply basic validation on the object (check that all the properties of SecureAccount are present and of the correct types)
+  validateSecureAccount(obj)
+
   if (root) {
     stream.writeUInt16(TypeIdentifierEnum.cSecureAccount)
   }
@@ -48,17 +58,44 @@ export function deserializeSecureAccount(stream: VectorBufferStream): SecureAcco
     throw new Error(`Unexpected end of buffer: remaining bytes: ${remainingBytes}, needed ${minimumBytesNeeded}`);
   }
 
-  const foo = {
-    ...baseAccount,
-    id: stream.readString(),
-    hash: stream.readString(),
-    timestamp: Number(stream.readBigUInt64()),
-    name: stream.readString(),
-    nextTransferAmount: stream.readBigUInt64(),
-    nextTransferTime: Number(stream.readBigUInt64()),
-    nonce: stream.readUInt32(),
-  };
-  console.log('FOO IS', foo);
-  return foo;
+  // Read each field, asserting its type as we go. If there is an issue, log and throw error.
+  try {
+    const id = stream.readString()
+    if (typeof id !== 'string') throw new Error('id must be string')
+
+    const hash = stream.readString() 
+    if (typeof hash !== 'string') throw new Error('hash must be string')
+
+    const timestamp = Number(stream.readBigUInt64())
+    if (isNaN(timestamp)) throw new Error('timestamp must be number')
+
+    const name = stream.readString()
+    if (typeof name !== 'string') throw new Error('name must be string')
+
+    const nextTransferAmount = stream.readBigUInt64()
+    if (typeof nextTransferAmount !== 'bigint') throw new Error('nextTransferAmount must be bigint')
+
+    const nextTransferTime = Number(stream.readBigUInt64())
+    if (isNaN(nextTransferTime)) throw new Error('nextTransferTime must be number')
+
+    const nonce = stream.readUInt32()
+    if (typeof nonce !== 'number') throw new Error('nonce must be number')
+
+    const foo = {
+      ...baseAccount,
+      id,
+      hash,
+      timestamp,
+      name,
+      nextTransferAmount,
+      nextTransferTime,
+      nonce
+    }
+    validateSecureAccount(foo)
+    return foo
+  } catch (err) {
+    console.error('Error validating SecureAccount fields:', err)
+    process.exit(1)
+  }
 }
 

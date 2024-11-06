@@ -66,6 +66,7 @@ import {
   OurAppDefinedData,
   PenaltyTX,
   ReadableReceipt,
+  SecureAccountInfo,
   SetCertTime,
   ShardeumBlockOverride,
   SignedNodeInitTxData,
@@ -73,7 +74,6 @@ import {
   StakeCoinsTX,
   StakeInfo,
   SyncingTimeoutViolationData,
-  TransferFromSecureAccount,
   UnstakeCoinsTX,
   WrappedAccount,
   WrappedEVMAccount,
@@ -172,8 +172,7 @@ import { initAjvSchemas, verifyPayload } from './types/ajv/Helpers'
 import { Sign, ServerMode } from '@shardus/core/dist/shardus/shardus-types'
 
 import { safeStringify } from '@shardus/types/build/src/utils/functions/stringify'
-import { 
-  isTransferFromSecureAccount, 
+import {
   crack as crackTransferFromSecureAccount, 
   apply as applyTransferFromSecureAccount, 
   verify as verifyTransferFromSecureAccount,
@@ -2864,7 +2863,7 @@ async function applyInternalTx(
     console.log('Applying transfer from secure account...', internalTx);
     try {
       await applyTransferFromSecureAccount(
-        internalTx as unknown as TransferFromSecureAccount,
+        internalTx,
         txId,
         txTimestamp,
         wrappedStates,
@@ -2892,6 +2891,7 @@ export const createInternalTxReceipt = (
   amountSpent = bigIntToHex(BigInt(0)),
   rewardAmount?: bigint,
   penaltyAmount?: bigint,
+  secureAccountName?: string
 ): void => {
   const blockForReceipt = getOrCreateBlockFromTimestamp(txTimestamp)
   const blockNumberForTx = blockForReceipt.header.number.toString()
@@ -2917,7 +2917,9 @@ export const createInternalTxReceipt = (
     internalTx: { ...internalTx, sign: null },
     ...(rewardAmount !== undefined && { rewardAmount }),
     ...(penaltyAmount !== undefined && { penaltyAmount }),
+    ...(secureAccountName !== undefined && { secureAccountName }),
   }
+  console.log('Readable receipt for internal tx:', readableReceipt);
   const wrappedReceiptAccount = {
     timestamp: txTimestamp,
     ethAddress: '0x' + txId,
@@ -2932,6 +2934,7 @@ export const createInternalTxReceipt = (
     txFrom: readableReceipt.from,
   }
   const receiptShardusAccount = WrappedEVMAccountFunctions._shardusWrappedAccount(wrappedReceiptAccount)
+  console.log('Receipt shardus account', receiptShardusAccount);
   shardus.applyResponseAddReceiptData(
     applyResponse,
     receiptShardusAccount,
@@ -5391,7 +5394,7 @@ const shardusSetup = (): void => {
         } else if (internalTx.internalTXType === InternalTXType.Penalty) {
           keys.sourceKeys = [tx.reportedNodePublickKey]
           keys.targetKeys = [toShardusAddress(tx.operatorEVMAddress, AccountType.Account), networkAccount]
-        } else if (isTransferFromSecureAccount(tx)) {
+        } else if (internalTx.internalTXType === InternalTXType.TransferFromSecureAccount) {
           const { sourceKeys, targetKeys } = crackTransferFromSecureAccount(tx)
           console.log('crackTransferFromSecureAccount', { sourceKeys, targetKeys })
           keys.sourceKeys = sourceKeys

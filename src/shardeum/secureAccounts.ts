@@ -1,18 +1,15 @@
-import { AccountMap, AccountType, BaseAccount, InternalTx, InternalTxBase, InternalTXType, ReadableReceipt, TransferFromSecureAccount, WrappedAccount, WrappedEVMAccount, WrappedStates } from './shardeumTypes'
+import { AccountType, BaseAccount, InternalTx, InternalTxBase, InternalTXType, WrappedAccount, WrappedEVMAccount, WrappedStates } from './shardeumTypes'
 import { updateEthAccountHash } from './wrappedEVMAccountFunctions'
 import { ShardeumFlags } from './shardeumFlags'
-import { generateTxId } from '../utils'
 import { toShardusAddress } from './evmAddress'
 
 import { ShardusTypes, DevSecurityLevel, Shardus } from '@shardus/core'
 import { verifyMultiSigs } from '../setup/helpers'
-import { shardusConfig } from '..'
+import { createInternalTxReceipt, shardusConfig } from '..'
 import { _shardusWrappedAccount } from './wrappedEVMAccountFunctions'
-import { crypto } from '../setup/helpers'
-import { VectorBufferStream } from '@shardus/core'
-import { TypeIdentifierEnum } from '../types/enum/TypeIdentifierEnum'
 
 import genesisSecureAccounts from '../config/genesis-secure-accounts.json'
+import { bigIntToHex } from '@ethereumjs/util'
 validateSecureAccountConfig(genesisSecureAccounts)
 
 export interface SecureAccount extends BaseAccount {
@@ -90,7 +87,7 @@ interface CrackedData {
   targetKeys: string[]
 }
 
-export function crack(tx: TransferFromSecureAccount): CrackedData {
+export function crack(tx: InternalTx): CrackedData {
   if (!secureAccountDataMap.has(tx.accountName)) {
     console.log('Secure account not found for transfer from secure account!', JSON.stringify(tx, null, 2));
     throw new Error(`Secure account ${tx.accountName} not found`);
@@ -106,8 +103,8 @@ export function crack(tx: TransferFromSecureAccount): CrackedData {
   }
 }
 
-export function validateTransferFromSecureAccount(tx: TransferFromSecureAccount, shardus: Shardus): { success: boolean; reason: string } {
-  if (tx.txType !== InternalTXType.TransferFromSecureAccount) {
+export function validateTransferFromSecureAccount(tx: InternalTx, shardus: Shardus): { success: boolean; reason: string } {
+  if (tx.internalTXType !== InternalTXType.TransferFromSecureAccount) {
     console.log('Invalid transaction type for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Invalid transaction type' }
   }
@@ -139,13 +136,18 @@ export function validateTransferFromSecureAccount(tx: TransferFromSecureAccount,
   }
 
   // Verify signatures
-  if (!tx.sign || tx.sign.length === 0) {
+  // Check if tx.sign is not an array
+  if (!Array.isArray(tx.sign)) {
+    console.log('tx.sign is not an array for transfer from secure account!', JSON.stringify(tx, null, 2));
+    return { success: false, reason: 'tx.sign is not an array' }
+  }
+  // must have at least one signature
+  if (tx.sign.length === 0) {
     console.log('Missing signatures for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Missing signatures' }
   }
 
   const txData = {
-    txType: tx.txType,
     amount: tx.amount,
     accountName: tx.accountName,
     nonce: tx.nonce
@@ -156,7 +158,7 @@ export function validateTransferFromSecureAccount(tx: TransferFromSecureAccount,
 
   const isSignatureValid = verifyMultiSigs(
     txData,
-    tx.sign,
+    tx.sign as ShardusTypes.Sign[],
     allowedPublicKeys,
     requiredSigs,
     DevSecurityLevel.High
@@ -177,7 +179,7 @@ export function validateTransferFromSecureAccount(tx: TransferFromSecureAccount,
 }
 
 export function verify(
-  tx: TransferFromSecureAccount,
+  tx: InternalTx,
   wrappedStates: WrappedStates,
   shardus: Shardus
 ): { success: boolean; reason: string } {
@@ -234,7 +236,7 @@ export function verify(
 }
 
 export async function apply(
-  tx: TransferFromSecureAccount,
+  tx: InternalTx,
   txId: string,
   txTimestamp: number,
   wrappedStates: WrappedStates,
@@ -248,13 +250,17 @@ export async function apply(
     throw new Error('Secure account config not found');
   }
   
-  const sourceEOA = wrappedStates[secureAccountConfig.SourceFundsAddress];
-  const destEOA = wrappedStates[secureAccountConfig.RecipientFundsAddress];
-  const secureAccount = wrappedStates[secureAccountConfig.SecureAccountAddress];
+  const sourceEOA = wrappedStates[toShardusAddress(secureAccountConfig.SourceFundsAddress, AccountType.Account)];
+  const destEOA = wrappedStates[toShardusAddress(secureAccountConfig.RecipientFundsAddress, AccountType.Account)];
+  const secureAccount = wrappedStates[toShardusAddress(secureAccountConfig.SecureAccountAddress, AccountType.SecureAccount)];
 
   // throw if any of the required accounts are not found
   if (!sourceEOA || !destEOA || !secureAccount) {
     console.log('One or more required accounts not found for transfer from secure account!', JSON.stringify(tx, null, 2));
+    console.log('sourceEOA address:', secureAccountConfig.SourceFundsAddress);
+    console.log('destEOA address:', secureAccountConfig.RecipientFundsAddress);
+    console.log('secureAccount address:', secureAccountConfig.SecureAccountAddress);
+    console.log('wrappedStates:', wrappedStates);
     throw new Error('One or more required accounts not found');
   }
 
@@ -271,7 +277,7 @@ export async function apply(
 
   if (BigInt(sourceEOAData.account.balance) < amount) {
     console.log('Insufficient balance in source account for transfer from secure account!', JSON.stringify(tx, null, 2));
-    throw new Error('Insufficient balance in source account');
+    throw new Error(`Insufficient balance in source account for transfer from secure account! ${sourceEOAData.account.balance} < ${amount}`);
   }
 
   // assert that the result of the balance subtraction has not overflowed or underflowed
@@ -296,6 +302,7 @@ export async function apply(
     destEOA: destEOAData.hash,
     secureAccount: secureAccountData.hash
   };
+  console.log('Hashes before:', hashesBefore);
   updateEthAccountHash(sourceEOAData);
   updateEthAccountHash(destEOAData);
   updateEthAccountHash(secureAccountData);
@@ -304,7 +311,7 @@ export async function apply(
     destEOA: destEOAData.hash,
     secureAccount: secureAccountData.hash
   };
-
+  console.log('Hashes after:', hashesAfter);
   const wrappedSourceEOA = _shardusWrappedAccount(sourceEOAData);
   const wrappedDestEOA = _shardusWrappedAccount(destEOAData);
   const wrappedSecureAccount = _shardusWrappedAccount(secureAccountData);
@@ -313,34 +320,28 @@ export async function apply(
     destEOA: (wrappedDestEOA.data as any).hash,
     secureAccount: (wrappedSecureAccount.data as any).hash
   };
- 
-  // one nice clean log statement for the hashes, including the before and after
-  console.log('Hashes:', {
-    before: hashesBefore,
-    after: hashesAfter,
-    wrappedHashes: wrappedHashes
-  });
+  console.log('Wrapped hashes:', wrappedHashes);
 
   try {
     shardus.applyResponseAddChangedAccount(
       applyResponse,
-    secureAccountConfig.SourceFundsAddress,
-    wrappedSourceEOA as ShardusTypes.WrappedResponse,
-    txId,
-    applyResponse.txTimestamp
-  );
-  shardus.applyResponseAddChangedAccount(
-    applyResponse,
-    secureAccountConfig.RecipientFundsAddress,
-    wrappedDestEOA as ShardusTypes.WrappedResponse,
-    txId,
-    applyResponse.txTimestamp
-  );
-  shardus.applyResponseAddChangedAccount(
-    applyResponse,
-    secureAccountConfig.SecureAccountAddress,
-    wrappedSecureAccount as ShardusTypes.WrappedResponse,
-    txId,
+      toShardusAddress(secureAccountConfig.SourceFundsAddress, AccountType.Account),
+      wrappedSourceEOA as ShardusTypes.WrappedResponse,
+      txId,
+      applyResponse.txTimestamp
+    );
+    shardus.applyResponseAddChangedAccount(
+      applyResponse,
+      toShardusAddress(secureAccountConfig.RecipientFundsAddress, AccountType.Account),
+      wrappedDestEOA as ShardusTypes.WrappedResponse,
+      txId,
+      applyResponse.txTimestamp
+    );
+    shardus.applyResponseAddChangedAccount(
+      applyResponse,
+      toShardusAddress(secureAccountConfig.SecureAccountAddress, AccountType.SecureAccount),
+      wrappedSecureAccount as ShardusTypes.WrappedResponse,
+      txId,
       applyResponse.txTimestamp
     );
   } catch (e) {
@@ -349,60 +350,21 @@ export async function apply(
   }
   console.log('Successfully added changed accounts for transfer from secure account!');
 
-
-  // Create the receipt data
-  const readableReceipt: ReadableReceipt = {
-    status: 1, 
-    transactionHash: txId,
-    transactionIndex: '0x0',
-    blockHash: '', 
-    blockNumber: '0x0',
-    from: secureAccountConfig.SourceFundsAddress,
-    to: secureAccountConfig.RecipientFundsAddress,
-    contractAddress: null,
-    cumulativeGasUsed: '0x0',
-    gasUsed: '0x0',
-    logs: [],
-    logsBloom: '0x',
-    type: '0x0',
-    // Additional fields for TransferFromSecureAccount
-    value: tx.amount,
-    nonce: `0x${tx.nonce.toString(16)}`, 
-    gasRefund: '0x0',
-    data: '', 
-  };
-
-  const wrappedReceiptAccount: WrappedEVMAccount = {
-    timestamp: applyResponse.txTimestamp,
-    ethAddress: txId, // Using txId as ethAddress for the receipt
-    hash: '',
-    readableReceipt,
-    amountSpent: '0x0',
-    txId: txId,
-    accountType: AccountType.SecureAccount,
-    txFrom: secureAccountConfig.SourceFundsAddress,
-    
-  };
-
-  console.log('Getting receiptShardusAccount from wrappedReceiptAccount:', JSON.stringify(wrappedReceiptAccount, null, 2));
-  const receiptShardusAccount = _shardusWrappedAccount(wrappedReceiptAccount);
-  
-  console.log('SENDING RECEIPT TO ARCHIVER', JSON.stringify(receiptShardusAccount, null, 2));
-  try {
-    shardus.applyResponseAddReceiptData(
+  if (ShardeumFlags.supportInternalTxReceipt) {
+    createInternalTxReceipt(
+      shardus,
       applyResponse,
-      receiptShardusAccount,
-      crypto.hashObj(receiptShardusAccount)
+      tx,
+      toShardusAddress(secureAccountConfig.SourceFundsAddress, AccountType.Account),
+      toShardusAddress(secureAccountConfig.RecipientFundsAddress, AccountType.Account),
+      txTimestamp,
+      txId,
+      bigIntToHex(BigInt(tx.amount)),
+      undefined,
+      undefined,
+      tx.accountName
     );
-    console.log('Successfully added receipt data for transfer from secure account!');
-  } catch (e) {
-    console.log('Error adding receipt data for transfer from secure account!', JSON.stringify(tx, null, 2));
-    throw e;
   }
-}
-
-export function isTransferFromSecureAccount(tx: InternalTxBase): tx is TransferFromSecureAccount {
-  return tx.internalTXType === InternalTXType.TransferFromSecureAccount
 }
 
 function validateSecureAccountConfig(config: SecureAccountConfig[]): void {

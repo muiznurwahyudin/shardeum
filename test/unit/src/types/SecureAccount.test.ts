@@ -44,6 +44,31 @@ describe('SecureAccount Binary Serialization', () => {
     expect(deserializedAccount.nonce).toBe(testAccount.nonce);
   });
 
+  it('should serialize and deserialize with root', () => {
+    const stream = new VectorBufferStream(1024);
+    
+    // Serialize
+    serializeSecureAccount(stream, testAccount, true);
+    
+    // Reset position for reading
+    stream.position = 0;
+    
+    // Read out the type because deserializeSecureAccount expects it to be there
+    const type = stream.readUInt16();
+    expect(type).toBe(TypeIdentifierEnum.cSecureAccount);
+    const deserializedAccount = deserializeSecureAccount(stream);
+    
+    // Compare all fields
+    expect(deserializedAccount.id).toBe(testAccount.id);
+    expect(deserializedAccount.hash).toBe(testAccount.hash);
+    expect(deserializedAccount.timestamp).toBe(testAccount.timestamp);
+    expect(deserializedAccount.accountType).toBe(testAccount.accountType);
+    expect(deserializedAccount.name).toBe(testAccount.name);
+    expect(deserializedAccount.nextTransferAmount).toBe(testAccount.nextTransferAmount);
+    expect(deserializedAccount.nextTransferTime).toBe(testAccount.nextTransferTime);
+    expect(deserializedAccount.nonce).toBe(testAccount.nonce);
+  });
+
   it('should throw error on version mismatch', () => {
     const stream = new VectorBufferStream(1024);
     stream.writeUInt16(TypeIdentifierEnum.cSecureAccount);

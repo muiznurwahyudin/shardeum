@@ -13,6 +13,9 @@ const totalStats = new Map();
 const archiverAccounts = new Map();
 let totalAccounts = 0;
 
+// Add this after the existing Maps
+const uniqueAccounts = new Map(); // Track unique accounts by accountId -> { accountType, data, validators: Map<port, data> }
+
 async function getDB(dbPath) {
   return new Promise((resolve, reject) => {
     const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
@@ -100,12 +103,41 @@ async function analyzeValidatorDB(validatorPort) {
     
     for (const row of accounts) {
       const accountData = JSON.parse(row.data);
-      const accountType = accountData.accountType || 'unknown';
-      
+      const accountType = accountData.accountType;
+
       // Compare with archiver data
       const isMatch = await compareValidatorAccount(validatorPort, row.accountId, accountData);
       if (!isMatch) {
         mismatchCount++;
+      }
+
+      // Track and compare unique accounts
+      if (!uniqueAccounts.has(row.accountId)) {
+        uniqueAccounts.set(row.accountId, {
+          accountType,
+          data: accountData,
+          validators: new Map([[validatorPort, accountData]])
+        });
+        totalStats.set(
+          accountType,
+          (totalStats.get(accountType) || 0) + 1
+        );
+        totalAccounts++;
+      } else {
+        // Compare with existing account data
+        const existingAccount = uniqueAccounts.get(row.accountId);
+        existingAccount.validators.set(validatorPort, accountData);
+        
+        // Deep comparison of account data
+        const existingStr = JSON.stringify(existingAccount.data, Object.keys(existingAccount.data).sort());
+        const newStr = JSON.stringify(accountData, Object.keys(accountData).sort());
+        
+        if (existingStr !== newStr) {
+          console.log(`\nAccount data mismatch for ${row.accountId}:`);
+          console.log(`Validator ${validatorPort} data:`, accountData);
+          console.log('Previously recorded data:', existingAccount.data);
+          console.log('Found in validators:', Array.from(existingAccount.validators.keys()).join(', '));
+        }
       }
 
       accountTypeCounts.set(
@@ -113,12 +145,6 @@ async function analyzeValidatorDB(validatorPort) {
         (accountTypeCounts.get(accountType) || 0) + 1
       );
       validatorAccountCount++;
-
-      totalStats.set(
-        accountType,
-        (totalStats.get(accountType) || 0) + 1
-      );
-      totalAccounts++;
     }
 
     validatorStats.set(validatorPort, {
@@ -172,7 +198,22 @@ async function generateReport() {
   }
   console.log(`\nTotal mismatches across all validators: ${totalMismatches}`);
 
-  // Continue with the rest of the original report...
+  // Add account type breakdown for each validator
+  console.log('\n=== Account Type Breakdown by Validator ===');
+  for (const [port, stats] of validatorStats) {
+    console.log(`\nValidator ${port} (Total: ${stats.total}):`);
+    for (const [accountType, count] of stats.counts) {
+      const percentage = ((count / stats.total) * 100).toFixed(2);
+      console.log(`  ${accountType}: ${count} (${percentage}%)`);
+    }
+  }
+
+  // Add overall account type breakdown
+  console.log('\n=== Overall Account Type Breakdown ===');
+  for (const [accountType, count] of totalStats) {
+    const percentage = ((count / totalAccounts) * 100).toFixed(2);
+    console.log(`${accountType}: ${count} (${percentage}%)`);
+  }
 }
 
 // Run the report

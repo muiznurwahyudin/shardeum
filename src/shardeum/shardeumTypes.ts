@@ -134,6 +134,13 @@ export interface InternalTx extends InternalTxBase {
   config?: string // change config
   nominee?: string // Node Account2
   nominator?: string // EVM Account (OperAcc)
+  accountName?: string // TransferFromSecureAccount
+  nonce?: number // TransferFromSecureAccount
+  amount?: string // TransferFromSecureAccount
+  sign: ShardusTypes.Sign | ShardusTypes.Sign[] // Array of signatures for multisig
+}
+
+export interface InternalTxWithSingleSign extends InternalTxBase {
   sign: ShardusTypes.Sign
 }
 
@@ -309,6 +316,7 @@ export interface ReadableReceipt {
   chainId?: string
   reason?: string // Added this to add the evm error reason
   stakeInfo?: StakeInfo
+  secureAccountInfo?: SecureAccountInfo
   isInternalTx?: boolean
   internalTx?: InternalTx
   maxFeePerGas?: string
@@ -318,6 +326,12 @@ export interface ReadableReceipt {
   s?: string
   penaltyAmount?: bigint,
   rewardedAmount?: bigint
+}
+
+// This is used in the transfer from secure account receipt
+export interface SecureAccountInfo {
+  amount: string
+  accountName: string
 }
 
 // This is used in stake/unstake tx receipt
@@ -520,12 +534,5 @@ export interface AppJoinData {
   mustUseAdminCert: boolean
 }
 
-export interface TransferFromSecureAccount extends InternalTxBase {
-  txType: InternalTXType.TransferFromSecureAccount
-  amount: string // Whole number of SHM tokens
-  accountName: string
-  nonce: number
-  sign?: ShardusTypes.Sign[]
-}
 
 export type AccountMap = Map<string, WrappedEVMAccount>;

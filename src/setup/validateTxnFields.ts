@@ -12,7 +12,7 @@ import {
   UnstakeCoinsTX,
   WrappedEVMAccount,
   NetworkAccount,
-  TransferFromSecureAccount,
+  InternalTxWithSingleSign,
 } from '../shardeum/shardeumTypes'
 import * as AccountsStorage from '../storage/accountStorage'
 import { validateClaimRewardTx } from '../tx/claimReward'
@@ -95,6 +95,7 @@ export const validateTxnFields =
       }
 
       if (isInternalTx(tx)) {
+        console.log('Validating internal tx', tx);
         const internalTX = tx as InternalTx
         let success = false
         let reason = ''
@@ -179,16 +180,15 @@ export const validateTxnFields =
               txnTimestamp: txnTimestamp,
             }
           }
-          success = crypto.verifyObj(internalTX)
+          success = crypto.verifyObj(internalTX as InternalTxWithSingleSign)
           return {
             success,
             reason,
             txnTimestamp: txnTimestamp,
           }
         } else if (tx.internalTXType === InternalTXType.TransferFromSecureAccount) {
-          const transferTx = tx as TransferFromSecureAccount
           // Perform thorough verification
-          const verifyResult = validateTransferFromSecureAccount(transferTx, shardus)
+          const verifyResult = validateTransferFromSecureAccount(tx, shardus)
           if (!verifyResult.success) {
             return {
               success,
@@ -204,7 +204,7 @@ export const validateTxnFields =
           }
         } else {
           try {
-            success = crypto.verifyObj(internalTX)
+            success = crypto.verifyObj(internalTX as InternalTxWithSingleSign)
           } catch (e) {
             reason = 'Invalid signature for internal tx'
           }
