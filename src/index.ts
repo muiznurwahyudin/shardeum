@@ -836,7 +836,7 @@ async function tryGetRemoteAccountCB(
   return fixedEVMAccount
 }
 
-function getStakeTxBlobFromEVMTx(
+export function getStakeTxBlobFromEVMTx(
   transaction: Transaction[TransactionType.Legacy] | Transaction[TransactionType.AccessListEIP2930]
 ): unknown {
   const stakeTxString = toAscii(bytesToHex(transaction.data))
