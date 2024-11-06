@@ -95,7 +95,6 @@ export const validateTxnFields =
       }
 
       if (isInternalTx(tx)) {
-        console.log('Validating internal tx', tx);
         const internalTX = tx as InternalTx
         let success = false
         let reason = ''

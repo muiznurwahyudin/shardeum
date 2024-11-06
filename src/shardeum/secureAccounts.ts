@@ -89,7 +89,6 @@ interface CrackedData {
 
 export function crack(tx: InternalTx): CrackedData {
   if (!secureAccountDataMap.has(tx.accountName)) {
-    console.log('Secure account not found for transfer from secure account!', JSON.stringify(tx, null, 2));
     throw new Error(`Secure account ${tx.accountName} not found`);
   }
   return {
@@ -105,45 +104,37 @@ export function crack(tx: InternalTx): CrackedData {
 
 export function validateTransferFromSecureAccount(tx: InternalTx, shardus: Shardus): { success: boolean; reason: string } {
   if (tx.internalTXType !== InternalTXType.TransferFromSecureAccount) {
-    console.log('Invalid transaction type for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Invalid transaction type' }
   }
 
   if (typeof tx.amount !== 'string' || !/^\d+$/.test(tx.amount)) {
-    console.log('Invalid amount format for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Invalid amount format' }
   }
 
   if (BigInt(tx.amount) <= 0) {
-    console.log('Amount is negative or zero for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Amount is negative or zero' }
   }
 
   if (typeof tx.accountName !== 'string' || tx.accountName.trim() === '') {
-    console.log('Invalid account name for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Invalid account name' }
   }
 
   if (typeof tx.nonce !== 'number' || tx.nonce < 0) {
-    console.log('Invalid nonce for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Invalid nonce' }
   }
 
   const secureAccountData = secureAccountDataMap.get(tx.accountName)
   if (!secureAccountData) {
-    console.log('Secure account not found for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Secure account not found' }
   }
 
   // Verify signatures
   // Check if tx.sign is not an array
   if (!Array.isArray(tx.sign)) {
-    console.log('tx.sign is not an array for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'tx.sign is not an array' }
   }
   // must have at least one signature
   if (tx.sign.length === 0) {
-    console.log('Missing signatures for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: 'Missing signatures' }
   }
 
@@ -185,7 +176,6 @@ export function verify(
 ): { success: boolean; reason: string } {
   const commonValidation = validateTransferFromSecureAccount(tx, shardus)
   if (!commonValidation.success) {
-    console.log('Common validation failed for transfer from secure account!', JSON.stringify(tx, null, 2));
     return { success: false, reason: commonValidation.reason }
   }
 

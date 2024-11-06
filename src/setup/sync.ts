@@ -102,16 +102,6 @@ export const sync = (shardus: Shardus, evmCommon: any) => async (): Promise<void
             secureAccountConfig as SecureAccountConfig,
             cycles
           );
-          
-          // const serializedSecureAccount = serializeSecureAccount(secureAccount);
-          // const accountCopy: ShardusTypes.AccountsCopy = {
-          //   cycleNumber: cycles[0].counter,
-          //   accountId: serializedSecureAccount.id,
-          //   data: serializedSecureAccount,
-          //   hash: serializedSecureAccount.hash,
-          //   isGlobal: false,
-          //   timestamp: serializedSecureAccount.timestamp,
-          // };
 
           const accountCopy: ShardusTypes.AccountsCopy = {
             cycleNumber: cycles[0].counter,

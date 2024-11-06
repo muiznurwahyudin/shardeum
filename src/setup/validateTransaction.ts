@@ -72,7 +72,6 @@ export const validateTransaction =
         return InitRewardTimesTx.validate(tx as InitRewardTimes, shardus)
       } else if (tx.internalTXType === InternalTXType.TransferFromSecureAccount) {
         const verifyResult = validateTransferFromSecureAccount(tx, shardus)
-        console.log('Verify result:', verifyResult);
         return { result: verifyResult.success ? 'pass' : 'fail', reason: verifyResult.reason }
       } else {
         //todo validate internal TX

@@ -2228,7 +2228,6 @@ const configShardusEndpoints = (): void => {
       }
       const limit = skip + 1000
       let accounts = []
-      // need to figure out how to handle this for secure accounts
       if (genesisAccounts.length > 0) {
         accounts = genesisAccounts.slice(skip, limit)
       }
@@ -2241,9 +2240,7 @@ const configShardusEndpoints = (): void => {
 
   shardus.registerExternalGet('secure_accounts', externalApiMiddleware, async (req, res) => {
     try {
-      // for each secure account, we need to get the data
       const secureAccounts = []
-      // use AccountsStorage.getAccount for each secureAccount.sourceFundsAddress && secureAccount.recipientFundsAddress
       for (const secureAccountConfig of secureAccountDataMap.values()) {
         const secureAccount = await AccountsStorage.getAccount(secureAccountConfig.SecureAccountAddress)
         const sourceAccount = await AccountsStorage.getAccount(secureAccountConfig.SourceFundsAddress)
@@ -2860,22 +2857,14 @@ async function applyInternalTx(
     applyPenaltyTX(shardus, penaltyTx, wrappedStates, txId, txTimestamp, applyResponse)
   }
   if (internalTx.internalTXType === InternalTXType.TransferFromSecureAccount) {
-    console.log('Applying transfer from secure account...', internalTx);
-    try {
-      await applyTransferFromSecureAccount(
-        internalTx,
-        txId,
-        txTimestamp,
-        wrappedStates,
-        shardus,
-        applyResponse
-      );
-      console.log('Successfully applied transfer from secure account!');
-      return applyResponse;
-    } catch (e) {
-      console.log('Error applying transfer from secure account!', JSON.stringify(internalTx, null, 2));
-      throw e;
-    }
+    await applyTransferFromSecureAccount(
+      internalTx,
+      txId,
+      txTimestamp,
+      wrappedStates,
+      shardus,
+      applyResponse
+    );
   }
   return applyResponse
 }
@@ -2919,7 +2908,7 @@ export const createInternalTxReceipt = (
     ...(penaltyAmount !== undefined && { penaltyAmount }),
     ...(secureAccountName !== undefined && { secureAccountName }),
   }
-  console.log('Readable receipt for internal tx:', readableReceipt);
+  
   const wrappedReceiptAccount = {
     timestamp: txTimestamp,
     ethAddress: '0x' + txId,
@@ -2934,7 +2923,7 @@ export const createInternalTxReceipt = (
     txFrom: readableReceipt.from,
   }
   const receiptShardusAccount = WrappedEVMAccountFunctions._shardusWrappedAccount(wrappedReceiptAccount)
-  console.log('Receipt shardus account', receiptShardusAccount);
+  
   shardus.applyResponseAddReceiptData(
     applyResponse,
     receiptShardusAccount,
@@ -3964,7 +3953,6 @@ const shardusSetup = (): void => {
         }
         if (appData.internalTx && appData.internalTXType === InternalTXType.TransferFromSecureAccount) {
           verifyResult = verifyTransferFromSecureAccount(appData.internalTx, wrappedStates, shardus)
-          console.log('Verified Secure Account Transfer:', verifyResult, wrappedStates);
         }
         if(verifyResult == null){
           verifyResult = {
@@ -3974,7 +3962,6 @@ const shardusSetup = (): void => {
         }
       } catch (error) {
         if (ShardeumFlags.VerboseLogs) console.log(`Stake/Unstake tx verification failed, reason: ${error}`)
-          console.log('Rejecting tx because of verify error:', error);
         verifyResult = {
           success: false,
           reason: error
@@ -4997,7 +4984,6 @@ const shardusSetup = (): void => {
       return generateTxId(tx)
     },
     async txPreCrackData(tx, appData): Promise<{ status: boolean; reason: string }> {
-      if (ShardeumFlags.VerboseLogs) console.log('Running txPreCrackData', tx, appData)
       if (ShardeumFlags.UseTXPreCrack === false) {
         return { status: true, reason: 'UseTXPreCrack is false' }
       }
@@ -5396,7 +5382,6 @@ const shardusSetup = (): void => {
           keys.targetKeys = [toShardusAddress(tx.operatorEVMAddress, AccountType.Account), networkAccount]
         } else if (internalTx.internalTXType === InternalTXType.TransferFromSecureAccount) {
           const { sourceKeys, targetKeys } = crackTransferFromSecureAccount(tx)
-          console.log('crackTransferFromSecureAccount', { sourceKeys, targetKeys })
           keys.sourceKeys = sourceKeys
           keys.targetKeys = targetKeys
         }
@@ -5412,7 +5397,6 @@ const shardusSetup = (): void => {
 
         const txId = generateTxId(tx)
         if (ShardeumFlags.VerboseLogs) console.log('crack', { timestamp, keys, id: txId })
-        console.log('crack final result', { timestamp, keys, id: customTXhash ?? txId })
         return {
           timestamp,
           keys,
@@ -7714,8 +7698,7 @@ const shardusSetup = (): void => {
         }
       } catch (e) {
         /* prettier-ignore */ if (logFlags.error) {
-          console.log('binarySerializeObject error:', e)
-          console.log('obj:', obj)
+          console.log('binarySerializeObject error:', e, 'obj: ', obj)
         }
         nestedCountersInstance.countEvent('binarySerializeObject', 'error')
         return Buffer.from(Utils.safeStringify(obj), 'utf8')
