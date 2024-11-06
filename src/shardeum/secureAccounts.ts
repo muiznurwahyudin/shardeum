@@ -286,8 +286,9 @@ export async function apply(
     throw new Error('Balance subtraction overflowed');
   }
 
-  sourceEOAData.balance = Number(BigInt(sourceEOAData.account.balance) - amount)
-  destEOAData.balance = Number(BigInt(destEOAData.account.balance) + amount)
+  sourceEOAData.account.balance = BigInt(sourceEOAData.account.balance) - amount
+  sourceEOAData.account.nonce = sourceEOAData.account.nonce + BigInt(1)
+  destEOAData.account.balance = BigInt(destEOAData.account.balance) + amount
 
   // update timestamp for each account
   sourceEOAData.timestamp = txTimestamp;
