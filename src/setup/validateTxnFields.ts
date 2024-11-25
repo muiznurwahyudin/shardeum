@@ -363,7 +363,7 @@ export const validateTxnFields =
           appData.internalTx = getStakeTxBlobFromEVMTx(transaction)
           appData.internalTx.stake = BigInt(appData.internalTx.stake)
           const stakeCoinsTx = appData.internalTx as StakeCoinsTX
-          const networkAccount = appData.networkAccount as NetworkAccount
+          const networkAccount = AccountsStorage.cachedNetworkAccount
           const minStakeAmountUsd = networkAccount.current.stakeRequiredUsd
           const minStakeAmount = scaleByStabilityFactor(
             minStakeAmountUsd,
