@@ -5551,7 +5551,7 @@ const shardusSetup = (): void => {
             appData.internalTXType === InternalTXType.Unstake)
         ) {
           appData.internalTx = getStakeTxBlobFromEVMTx(transaction)
-          appData.internalTx.stake = BigInt(appData.internalTx.stake)
+          if (appData.internalTx.stake) appData.internalTx.stake = BigInt(appData.internalTx.stake)
           const transformedTargetKey = appData.internalTx.nominee // no need to convert to shardus address
           result.targetKeys.push(transformedTargetKey)
           result.sourceKeys.push(networkAccount)
