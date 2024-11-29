@@ -429,6 +429,11 @@ export interface NodeAccountStats {
   penaltyHistory: { type: ViolationType; amount: bigint; timestamp: number }[]
   //set when first staked
   isShardeumRun: boolean
+  // Track violation counts for license points system
+  violationCounts: {
+    [key in ViolationType]: number;
+  }
+  lastViolationTime: number
 }
 
 export interface DevAccount extends BaseAccount {

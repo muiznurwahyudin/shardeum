@@ -259,6 +259,11 @@ export async function applyPenaltyTX(
   //TODO should we check if it was already penalized?
   const penaltyAmount = getPenaltyForViolation(tx, nodeAccount.stakeLock)
   applyPenalty(nodeAccount, operatorAccount, penaltyAmount)
+  
+  // Update violation counts
+  nodeAccount.nodeAccountStats.violationCounts[tx.violationType]++
+  nodeAccount.nodeAccountStats.lastViolationTime = eventTime
+  
   nodeAccount.nodeAccountStats.penaltyHistory.push({
     type: tx.violationType,
     amount: penaltyAmount,

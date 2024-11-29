@@ -195,7 +195,7 @@ export let genesisAccounts: string[] = []
 // Two global variables: at the top of utils/versions.ts
 // Where to call this function: After shradus factory line 146 console.logs ke pehle
 // Add a console log to log out to fetched versions
-// “getNodeInfoAppData()”
+// "getNodeInfoAppData()"
 
 const ERC20_BALANCEOF_CODE = '0x70a08231'
 
@@ -3129,6 +3129,14 @@ const createNodeAccount2 = (accountId: string): NodeAccount2 => {
       penaltyHistory: [],
       lastPenaltyTime: 0,
       isShardeumRun: false,
+      // Initialize violation counts
+      violationCounts: {
+        [ViolationType.LeftNetworkEarly]: 0,
+        [ViolationType.SyncingTooLong]: 0,
+        [ViolationType.NodeRefuted]: 0,
+        [ViolationType.DoubleVote]: 0
+      },
+      lastViolationTime: 0
     },
     rewarded: false,
     rewardRate: BigInt(0),

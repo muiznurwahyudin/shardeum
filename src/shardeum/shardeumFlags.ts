@@ -1,4 +1,4 @@
-import { DecimalString } from './shardeumTypes'
+import { DecimalString, ViolationType } from './shardeumTypes'
 
 interface ShardeumFlags {
   contractStorageKeySilo: boolean
@@ -123,6 +123,9 @@ interface ShardeumFlags {
   failedStakeReceipt: boolean // For stake/unstake TXs that fail the checks in apply(), create an EVM receipt marked as failed
   debugDefaultBalance: string
   disableSmartContractEndpoints: boolean
+  violationWeights: {
+    [key in ViolationType]: number;
+  }
 }
 
 export const ShardeumFlags: ShardeumFlags = {
@@ -283,6 +286,14 @@ export const ShardeumFlags: ShardeumFlags = {
   failedStakeReceipt: true,
   debugDefaultBalance: '100', //In debug mode the default value is 100 SHM.  This is needed for certain load test operations
   disableSmartContractEndpoints: true, // Disable smart contract read endpoints by default
+
+  // Default violation weights in minutes
+  violationWeights: {
+    [ViolationType.LeftNetworkEarly]: 180,  // 3 hours
+    [ViolationType.SyncingTooLong]: 30,     // 30 minutes
+    [ViolationType.NodeRefuted]: 30,        // 30 minutes
+    [ViolationType.DoubleVote]: 360         // 6 hours
+  }
 }
 
 export function updateShardeumFlag(key: string, value: string | number | boolean): void {
