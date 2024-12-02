@@ -832,7 +832,7 @@ async function tryGetRemoteAccountCB(
   return fixedEVMAccount
 }
 
-function getStakeTxBlobFromEVMTx(
+export function getStakeTxBlobFromEVMTx(
   transaction: Transaction[TransactionType.Legacy] | Transaction[TransactionType.AccessListEIP2930]
 ): unknown {
   const stakeTxString = toAscii(bytesToHex(transaction.data))
@@ -3939,6 +3939,7 @@ const shardusSetup = (): void => {
           verifyResult = verifyStakeTx(appData.internalTx, senderAddress, wrappedStates)
         }
         if (appData.internalTx && appData.internalTXType === InternalTXType.Unstake) {
+          appData.internalTx = getStakeTxBlobFromEVMTx(transaction)
           verifyResult = verifyUnstakeTx(appData.internalTx, senderAddress, wrappedStates, shardus);
         }
         if (appData.internalTx && appData.internalTXType === InternalTXType.TransferFromSecureAccount) {
