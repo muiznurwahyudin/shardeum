@@ -40,7 +40,7 @@ import {
 import { fixBigIntLiteralsToBigInt } from '../utils/serialization'
 import { validatePenaltyTX } from '../tx/penalty/transaction'
 import { bytesToHex } from '@ethereumjs/util'
-import { logFlags, shardusConfig } from '..'
+import { logFlags, shardusConfig, getStakeTxBlobFromEVMTx } from '..'
 import { Sign } from '@shardus/core/dist/shardus/shardus-types'
 import { validateTransferFromSecureAccount } from '../shardeum/secureAccounts'
 
@@ -438,6 +438,7 @@ export const validateTxnFields =
 
         if (appData && appData.internalTx && appData.internalTXType === InternalTXType.Unstake) {
           nestedCountersInstance.countEvent('shardeum-unstaking', 'validating unstake coins tx fields')
+          appData.internalTx = getStakeTxBlobFromEVMTx(transaction)
           if (ShardeumFlags.VerboseLogs) console.log('Validating unstake coins tx fields', appData.internalTx)
           const unstakeCoinsTX = appData.internalTx as UnstakeCoinsTX
           if (
