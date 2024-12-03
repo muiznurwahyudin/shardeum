@@ -68,7 +68,7 @@ async function main() {
       printWarning(`Your version:     ${currentCommit}`);
       printWarning(`Latest version:   ${latestCommit}`);
       printWarning('\nRun without --check flag to update package.json\n');
-      process.exit(1); // Exit with error code to help with CI/CD
+      return;
     } else {
       console.log('Updates available! Updating package.json...');
       updatePackageJson(latestCommit);
