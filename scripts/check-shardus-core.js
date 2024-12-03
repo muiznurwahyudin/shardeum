@@ -64,10 +64,13 @@ async function main() {
 
   if (currentCommit !== latestCommit) {
     if (CHECK_ONLY) {
-      printWarning('\n⚠️  WARNING: Updates Available! ⚠️');
-      printWarning(`Your version:     ${currentCommit}`);
+      printWarning('\n⚠️  WARNING: shardus-core Updates Available! ⚠️');
+      printWarning('\nYour local shardus-core is behind the dev branch:');
+      printWarning(`Current version:  ${currentCommit}`);
       printWarning(`Latest version:   ${latestCommit}`);
-      printWarning('\nRun without --check flag to update package.json\n');
+      printWarning('\nTo update, run:');
+      printWarning('node scripts/check-shardus-core.js');
+      printWarning('npm install\n');
       return;
     } else {
       console.log('Updates available! Updating package.json...');
