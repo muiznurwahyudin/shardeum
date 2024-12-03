@@ -141,7 +141,7 @@ if (process.env.APP_IP) {
 config = merge(config, {
   server: {
     p2p: {
-      cycleDuration: 30,
+      cycleDuration: 60,
       minNodesToAllowTxs: 1, // to allow single node networks
       baselineNodes: process.env.baselineNodes ? parseInt(process.env.baselineNodes) : 10,
       minNodes: process.env.minNodes ? parseInt(process.env.minNodes) : 10,

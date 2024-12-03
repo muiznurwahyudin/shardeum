@@ -137,7 +137,7 @@ export const ShardeumFlags: ShardeumFlags = {
   Virtual0Address: true,
   GlobalNetworkAccount: true,
   FirstNodeRewardCycle: 100,
-  blockProductionRate: 3,
+  blockProductionRate: 6,
   initialBlockNumber: 0,
   maxNumberOfOldBlocks: 256,
   SelfTest: false,
