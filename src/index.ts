@@ -186,7 +186,7 @@ export let genesisAccounts: string[] = []
 // Two global variables: at the top of utils/versions.ts
 // Where to call this function: After shradus factory line 146 console.logs ke pehle
 // Add a console log to log out to fetched versions
-// “getNodeInfoAppData()”
+// "getNodeInfoAppData()"
 
 const ERC20_BALANCEOF_CODE = '0x70a08231'
 
@@ -3099,6 +3099,15 @@ const createNodeAccount2 = (accountId: string): NodeAccount2 => {
     },
     rewarded: false,
     rewardRate: BigInt(0),
+    behaviorStats: {
+      lostCount: 0,
+      refuteCount: 0,
+      lastLostTime: 0,
+      lastRefuteTime: 0,
+      oscillationCount: 0,
+      lastOscillationTime: 0,
+      consecutiveLostRefutes: 0
+    }
   }
   WrappedEVMAccountFunctions.updateEthAccountHash(nodeAccount)
   return nodeAccount
@@ -7954,7 +7963,7 @@ export function shardeumGetTime(): number {
   if (isServiceMode())
     AccountsStorage.setAccount(networkAccount, await AccountsStorage.getAccount(networkAccount))
   shardusSetup()
-  config.server = shardus.config //possibly set the server config to match the merged one?
+  config.server = shardus.config as any //possibly set the server config to match the merged one?
 
   if (ShardeumFlags.GlobalNetworkAccount) {
     // CODE THAT GETS EXECUTED WHEN NODES START
