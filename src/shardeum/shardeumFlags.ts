@@ -181,7 +181,7 @@ export const ShardeumFlags: ShardeumFlags = {
     ['canUnstake/:nominee/:nominator']: 5,
   },
   generateMemoryPatternData: true,
-  StakingEnabled: false,
+  StakingEnabled: true,
   ModeEnabled: true,
   AdminCertEnabled: false,
   minActiveNodesForStaking: 5,

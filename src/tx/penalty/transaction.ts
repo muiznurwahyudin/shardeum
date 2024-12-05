@@ -394,9 +394,9 @@ export async function applyPenaltyTX(
         nodeAccount.rewardEndTime = 0
         nodeAccount.behaviorStats = null
 
-        if (logFlags.dapp_verbose) console.log(`Node ${nodeAccount.id} removed from network due to excessive violations`)
+        if (logFlags.verbose) console.log(`Node ${nodeAccount.id} removed from network due to excessive violations`)
       } else {
-        if (logFlags.dapp_verbose) console.log(`Failed to get consensus for removing node ${nodeAccount.id}`)
+        if (logFlags.verbose) console.log(`Failed to get consensus for removing node ${nodeAccount.id}`)
       }
     }
   }

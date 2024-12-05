@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default configuration
-ISOLATION_DURATION=${ISOLATION_DURATION:-15}     # Duration of isolation in seconds
+ISOLATION_DURATION=${ISOLATION_DURATION:-65}     # Duration of isolation in seconds
 NORMAL_DURATION=${NORMAL_DURATION:-15}           # Duration of normal operation in seconds
 ISOLATION_PROBABILITY=${ISOLATION_PROBABILITY:-20} # Probability of isolation during degraded state
 TARGET_NODE=${TARGET_NODE:-""}                   # Specific node ID to target (empty = random selection)

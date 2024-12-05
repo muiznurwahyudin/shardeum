@@ -10,7 +10,7 @@ export function applyPenalty(
   operatorEOA: WrappedEVMAccount,
   penalty: bigint
 ): boolean {
-  /* prettier-ignore */ if (logFlags.dapp_verbose) console.log(`\nApplying Penalty on Node: ${nodeAccount.id} of ${penalty.toString()} SHM`)
+  /* prettier-ignore */ if (logFlags.dapp_verbose) console.log(`\nTracking Penalty on Node: ${nodeAccount.id} of ${penalty.toString()} SHM (not applying)`)
 
   // convert hex value to BN
   operatorEOA.operatorAccountInfo.stake = _base16BNParser(operatorEOA.operatorAccountInfo.stake)
@@ -23,14 +23,11 @@ export function applyPenalty(
 
   if (penalty > nodeAccount.stakeLock) penalty = nodeAccount.stakeLock
 
-  // update operator account
-  operatorEOA.operatorAccountInfo.stake -= penalty
+  // Only update penalty tracking stats, don't modify actual stake amounts
   operatorEOA.operatorAccountInfo.operatorStats.totalNodePenalty += penalty
-
-  // update node account
-  nodeAccount.stakeLock -= penalty
   nodeAccount.penalty += penalty
   nodeAccount.nodeAccountStats.totalPenalty += penalty
+
   return true
 }
 
