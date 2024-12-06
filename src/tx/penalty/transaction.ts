@@ -321,29 +321,6 @@ function shouldRemoveNode(nodeAccount: NodeAccount2): boolean {
   return false;
 }
 
-function isRateLimited(nodeAccount: NodeAccount2, txTimestamp: number): boolean {
-  const stats = nodeAccount.behaviorStats;
-  if (!stats) return false;
-
-  // Rate limit based on recent activity
-  const timeSinceLastLost = txTimestamp - stats.lastLostTime;
-  const timeSinceLastRefute = txTimestamp - stats.lastRefuteTime;
-
-  // Minimum time between lost reports increases with violation count
-  const minTimeBetweenLost = Math.min(300000 * (1 + stats.lostCount), 3600000); // 5min base, up to 1hr
-  if (timeSinceLastLost < minTimeBetweenLost) {
-    return true;
-  }
-
-  // Minimum time between refutes increases with violation count
-  const minTimeBetweenRefutes = Math.min(300000 * (1 + stats.refuteCount), 3600000); // 5min base, up to 1hr
-  if (timeSinceLastRefute < minTimeBetweenRefutes) {
-    return true;
-  }
-
-  return false;
-}
-
 export async function applyPenaltyTX(
   shardus,
   tx: PenaltyTX,
@@ -381,23 +358,6 @@ export async function applyPenaltyTX(
     shardus.applyResponseSetFailed(
       applyResponse,
       `applyPenaltyTX failed isProcessedPenaltyTx reportedNode: ${tx.reportedNodePublickKey}`
-    )
-    return
-  }
-
-  // Check rate limiting before processing
-  if (isRateLimited(nodeAccount, txTimestamp)) {
-    if (logFlags.dapp_verbose) console.log(
-      `Rate limited penalty TX for node ${nodeAccount.id}`,
-      {
-        lastLostTime: nodeAccount.behaviorStats?.lastLostTime,
-        lastRefuteTime: nodeAccount.behaviorStats?.lastRefuteTime,
-        txTimestamp
-      }
-    )
-    shardus.applyResponseSetFailed(
-      applyResponse,
-      `Rate limited penalty TX for node ${nodeAccount.id}`
     )
     return
   }

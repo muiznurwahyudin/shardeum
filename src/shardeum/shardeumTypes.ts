@@ -396,6 +396,15 @@ export interface NodeAccount2 extends BaseAccount {
   nodeAccountStats: NodeAccountStats
   rewarded: boolean
   rewardRate: bigint
+  behaviorStats?: {
+    lostCount: number
+    refuteCount: number
+    lastLostTime: number
+    lastRefuteTime: number
+    oscillationCount: number
+    lastOscillationTime: number
+    consecutiveLostRefutes: number
+  }
 }
 
 //type guard
