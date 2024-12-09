@@ -1,5 +1,5 @@
 diff --git a/src/config/index.ts b/src/config/index.ts
-index cd300a25..59647840 100644
+index fc3674f2..c97ca006 100644
 --- a/src/config/index.ts
 +++ b/src/config/index.ts
 @@ -134,9 +134,9 @@ config = merge(config, {
@@ -38,6 +38,15 @@ index cd300a25..59647840 100644
        allowActivePerCycleRecover: 4, 
  
  
+@@ -274,7 +274,7 @@ config = merge(config, {
+     sharding: {
+       nodesPerConsensusGroup: process.env.nodesPerConsensusGroup
+         ? parseInt(process.env.nodesPerConsensusGroup)
+-        : 128, //128 is the final goal
++        : 10, //128 is the final goal
+       nodesPerEdge: process.env.nodesPerEdge ? parseInt(process.env.nodesPerEdge) : 5,
+       executeInOneShard: true,
+     },
 @@ -318,11 +318,11 @@ config = merge(
    config,
    {
