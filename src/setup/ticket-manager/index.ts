@@ -72,7 +72,7 @@ export async function updateTicketMap(): Promise<void> {
     const ticketTypes: TicketType[] = await getTicketTypesFromArchiver(archiver)
 
     const devPublicKeys = shardusConfig?.debug?.multisigKeys || {}
-    const requiredSigs = Math.max(1, shardusConfig?.debug?.minMultiSigRequiredForGlobalTxs || 3)
+    const requiredSigs = Math.max(2, shardusConfig?.debug?.minMultiSigRequiredForGlobalTxs || 1)
 
     ticketTypes.forEach((ticketType: TicketType, i: number) => {
       const { sign, ...ticketTypeWithoutSign } = ticketType
