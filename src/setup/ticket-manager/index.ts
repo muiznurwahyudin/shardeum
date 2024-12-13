@@ -86,6 +86,7 @@ export async function updateTicketMap(): Promise<void> {
       )
       /* prettier-ignore */ if (logFlags.debug) console.log(JSON.stringify({script: 'tickets',method: 'updateTicketMap',data: { index: i, ticketType, isValidSig },}))
       if (isValidSig) {
+        console.log(`[tickets][updateTicketMap] ticket type ${ticketType.type} added to ticket map`)
         ticketTypeMap.set(ticketType.type, ticketType)
       } else {
         console.warn(`[tickets][updateTicketMap] Invalid signature for ticket ${JSON.stringify(ticketType)}`)
