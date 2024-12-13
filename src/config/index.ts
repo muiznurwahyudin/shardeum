@@ -139,7 +139,11 @@ config = merge(config, {
       maxNodes: process.env.maxNodes ? parseInt(process.env.maxNodes) : 10,
       maxJoinedPerCycle: 10,
       maxSyncingPerCycle: 10,
-      maxRotatedPerCycle: process.env.maxRotatedPerCycle ? parseInt(process.env.maxRotatedPerCycle) : 1,
+      maxRotatedPerCycle: process.env.maxRotatedPerCycle ? parseInt(process.env.maxRotatedPerCycle) : 5,
+      maxProblematicNodeRemovalsPerCycle: 1,
+      problematicNodeConsecutiveRefuteThreshold: 6,
+      problematicNodeRefutePercentageThreshold: 0.1,
+      problematicNodeHistoryLength: 100,
       firstCycleJoin: 0,
       maxSyncTimeFloor: 10000, //Using 6000 for a restore from archiver, then set config at runtime back to 1200
       //  1200=20 minutes.  If the network lives a long time we may have to bump this up
@@ -311,7 +315,7 @@ config = merge(
   config,
   {
     server: {
-      mode: 'release', // todo: must set this to "release" for public networks or get security on endpoints. use "debug"
+      mode: 'debug', // todo: must set this to "release" for public networks or get security on endpoints. use "debug"
       // for easier debugging
       debug: {
         startInFatalsLogMode: false, // true setting good for big aws test with nodes joining under stress.
